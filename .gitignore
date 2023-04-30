@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# テスト用ROMを格納するディレクトリ
+test_rom
+
+# VSCode設定ファイル
+.vscode
