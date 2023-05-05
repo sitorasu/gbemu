@@ -45,7 +45,7 @@
 * Pixel FIFOの挙動、それによって決まるmode 3の長さ
 
 ## 目下やること
-- [ ] テスト用ROM（cpu_instrs, instr_timing）を用意する
+- [x] テスト用ROM（cpu_instrs, instr_timing）を用意する
 - [ ] MBC1を実装する（テスト用ROMがMBC1なので）
 - [ ] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
 - [ ] CPUを実装してinstr_timingを通す（シリアル出力で確認）

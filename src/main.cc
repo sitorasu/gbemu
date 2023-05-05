@@ -42,14 +42,24 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  if (input_data.size() < 150) {
+  // Cartridge headerの分のサイズすらないならエラー
+  if (input_data.size() < 0x150) {
     std::cerr << "ROM format error\n";
     return 0;
   }
 
+  // Cartridge headerの読み出し
   CartridgeHeader header =
       CartridgeHeader::create(reinterpret_cast<uint8_t*>(input_data.data()));
   header.print();
+
+  // Cartridge headerに書かれているサイズと実際のサイズが異なるならエラー
+  if (header.rom_size * 1024 != input_data.size()) {
+    std::cerr << "ROM size error:\n"
+              << "  header's' rom size = " << header.rom_size * 1024 << "\n"
+              << "  actual rom size = " << input_data.size() << "\n";
+    return 0;
+  }
 
   switch (header.type) {
     case CartridgeHeader::CartridgeType::kRomOnly:
