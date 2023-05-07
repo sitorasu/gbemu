@@ -13,7 +13,7 @@ class Memory {
   std::uint8_t internal_ram[8 * 1024];
 
  public:
-  explicit Memory();
+  Memory() {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
   std::uint8_t read(std::uint16_t address);
   void write(std::uint16_t address, std::uint8_t value);
