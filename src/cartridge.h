@@ -18,8 +18,8 @@ class Cartridge {
   // 初期化順序（header_が先）に依存した処理のため注意
   Cartridge(std::vector<uint8_t>&& data)
       : header_(data), data_(std::move(data)) {}
-  virtual uint8_t read8(uint16_t address) = 0;
-  virtual void write8(uint16_t address, uint8_t value) = 0;
+  virtual uint8_t Read8(uint16_t address) = 0;
+  virtual void Write8(uint16_t address, uint8_t value) = 0;
 
  private:
   CartridgeHeader header_;
