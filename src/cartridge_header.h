@@ -9,6 +9,9 @@ namespace gbemu {
 
 // いったん生成したらメンバ変数の値は変更できない
 struct CartridgeHeader {
+  using uint8_t = std::uint8_t;
+  using uint32_t = std::uint32_t;
+
   const std::string title;
 
   enum class CartridgeTarget { kGb, kGbAndGbc, kGbc };
@@ -46,10 +49,10 @@ struct CartridgeHeader {
   };
   const CartridgeType type;
 
-  const std::uint32_t rom_size;  // 単位：KiB
-  const std::uint32_t ram_size;  // 単位：KiB
+  const uint32_t rom_size;  // 単位：KiB
+  const uint32_t ram_size;  // 単位：KiB
 
-  explicit CartridgeHeader(const std::vector<std::uint8_t>& data)
+  explicit CartridgeHeader(const std::vector<uint8_t>& data)
       : title(GetTitle(data)),
         target(GetCartridgeTarget(data)),
         type(GetCartridgeType(data)),
@@ -60,12 +63,11 @@ struct CartridgeHeader {
   void Print();
 
  private:
-  static std::string GetTitle(const std::vector<std::uint8_t>& data);
-  static CartridgeTarget GetCartridgeTarget(
-      const std::vector<std::uint8_t>& data);
-  static CartridgeType GetCartridgeType(const std::vector<std::uint8_t>& data);
-  static std::uint32_t GetRomSize(const std::vector<std::uint8_t>& data);
-  static std::uint32_t GetRamSize(const std::vector<std::uint8_t>& data);
+  static std::string GetTitle(const std::vector<uint8_t>& data);
+  static CartridgeTarget GetCartridgeTarget(const std::vector<uint8_t>& data);
+  static CartridgeType GetCartridgeType(const std::vector<uint8_t>& data);
+  static uint32_t GetRomSize(const std::vector<uint8_t>& data);
+  static uint32_t GetRamSize(const std::vector<uint8_t>& data);
   static std::string GetCartridgeTargetString(CartridgeTarget target);
   static std::string GetCartridgeTypeString(CartridgeType type);
 };

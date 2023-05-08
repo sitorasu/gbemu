@@ -10,6 +10,9 @@
 #include "cartridge_header.h"
 
 using namespace gbemu;
+using uint8_t = std::uint8_t;
+using uint16_t = std::uint16_t;
+using uint32_t = std::uint32_t;
 
 int main(int argc, char* argv[]) {
   // コマンドラインの書式をチェック
@@ -29,7 +32,7 @@ int main(int argc, char* argv[]) {
   // ROMファイルを読み出す
   std::istreambuf_iterator<char> it_ifs_begin(ifs);
   std::istreambuf_iterator<char> it_ifs_end{};
-  std::vector<std::uint8_t> input_data(it_ifs_begin, it_ifs_end);
+  std::vector<uint8_t> input_data(it_ifs_begin, it_ifs_end);
   if (ifs.fail()) {
     std::cerr << "File read error: " << path << "\n";
     return 0;

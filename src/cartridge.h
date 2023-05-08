@@ -2,6 +2,7 @@
 #define GBEMU_CARTRIDGE_H_
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "cartridge_header.h"
@@ -9,14 +10,23 @@
 namespace gbemu {
 
 class Cartridge {
+  using uint8_t = std::uint8_t;
+  using uint16_t = std::uint16_t;
+  using uint32_t = std::uint32_t;
+
  public:
-  virtual uint8_t read8(std::uint16_t address) = 0;
-  virtual void write8(std::uint16_t address, std::uint8_t value) = 0;
+  // 初期化順序（header_が先）に依存した処理のため注意
+  Cartridge(std::vector<uint8_t>&& data)
+      : header_(data), data_(std::move(data)) {}
+  virtual uint8_t read8(uint16_t address) = 0;
+  virtual void write8(uint16_t address, uint8_t value) = 0;
 
  private:
-  CartridgeHeader header;
-  std::vector<std::uint8_t> data;
+  CartridgeHeader header_;
+  std::vector<uint8_t> data_;
 };
+
+class NoMbcCartridge : public Cartridge {};
 
 }  // namespace gbemu
 
