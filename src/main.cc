@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
   // ROMファイルを読み出す
   std::istreambuf_iterator<char> it_ifs_begin(ifs);
   std::istreambuf_iterator<char> it_ifs_end{};
-  std::vector<char> input_data(it_ifs_begin, it_ifs_end);
+  std::vector<std::uint8_t> input_data(it_ifs_begin, it_ifs_end);
   if (ifs.fail()) {
     std::cerr << "File read error: " << path << "\n";
     return 0;
@@ -49,9 +49,8 @@ int main(int argc, char* argv[]) {
   }
 
   // Cartridge headerの読み出し
-  CartridgeHeader header =
-      CartridgeHeader::create(reinterpret_cast<uint8_t*>(input_data.data()));
-  header.print();
+  CartridgeHeader header(input_data);
+  header.Print();
 
   // Cartridge headerに書かれているサイズと実際のサイズが異なるならエラー
   if (header.rom_size * 1024 != input_data.size()) {
