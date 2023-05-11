@@ -32,7 +32,7 @@ class NoMbcCartridge : public Cartridge {
   NoMbcCartridge(std::vector<uint8_t>&& data) : Cartridge(std::move(data)) {}
   uint8_t Read8(uint16_t address) override { return data_.at(address); }
   void Write8(uint16_t address, uint8_t value) override {
-    data_.at(address) = value;
+    // 何もしない
   }
 };
 
