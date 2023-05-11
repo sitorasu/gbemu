@@ -10,6 +10,7 @@
 namespace gbemu {
 
 class Cartridge {
+ protected:
   using uint8_t = std::uint8_t;
   using uint16_t = std::uint16_t;
   using uint32_t = std::uint32_t;
@@ -21,12 +22,19 @@ class Cartridge {
   virtual uint8_t Read8(uint16_t address) = 0;
   virtual void Write8(uint16_t address, uint8_t value) = 0;
 
- private:
+ protected:
   CartridgeHeader header_;
   std::vector<uint8_t> data_;
 };
 
-class NoMbcCartridge : public Cartridge {};
+class NoMbcCartridge : public Cartridge {
+ public:
+  NoMbcCartridge(std::vector<uint8_t>&& data) : Cartridge(std::move(data)) {}
+  uint8_t Read8(uint16_t address) override { return data_.at(address); }
+  void Write8(uint16_t address, uint8_t value) override {
+    data_.at(address) = value;
+  }
+};
 
 }  // namespace gbemu
 
