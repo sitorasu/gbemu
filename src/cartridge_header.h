@@ -70,12 +70,19 @@ struct CartridgeHeader {
         type(GetCartridgeType(rom)),
         rom_size(GetRomSize(rom)),
         ram_size(GetRamSize(rom)) {}
+  // ROMのタイトルを取得する
   static std::string GetTitle(const std::vector<uint8_t>& rom);
+  // ROMが動作するモデル（GB or GB/GBC or GBC）を取得する
   static CartridgeTarget GetCartridgeTarget(const std::vector<uint8_t>& rom);
+  // ROMのMBCの種類を取得する
   static CartridgeType GetCartridgeType(const std::vector<uint8_t>& rom);
+  // ROMのサイズを取得する
   static uint32_t GetRomSize(const std::vector<uint8_t>& rom);
+  // カートリッジに内蔵されたRAMのサイズを取得する
   static uint32_t GetRamSize(const std::vector<uint8_t>& rom);
+  // CartridgeTargetの値を文字列に変換する
   static std::string GetCartridgeTargetString(CartridgeTarget target);
+  // CartridgeTypeの値を文字列に変換する
   static std::string GetCartridgeTypeString(CartridgeType type);
 };
 

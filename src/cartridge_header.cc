@@ -25,7 +25,7 @@ CartridgeHeader CartridgeHeader::Create(const std::vector<uint8_t>& rom) {
   return header;
 }
 
-// ROMの$0134-0143（title, 16バイト）を取得
+// ROMの$0134から15または16バイトを取得
 std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& rom) {
   auto title_size = GetCartridgeTarget(rom) == CartridgeTarget::kGb ? 16 : 15;
   return std::string(reinterpret_cast<const char*>(&rom[0x134]), title_size);
