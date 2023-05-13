@@ -24,7 +24,8 @@ class Cartridge {
   Cartridge(std::vector<uint8_t>&& rom_data)
       : header_(CartridgeHeader::Create(rom_data)),
         mbc_(Mbc::Create(header_.type)),
-        rom_data_(std::move(rom_data)) {
+        rom_data_(std::move(rom_data)),
+        ram_data_(header_.ram_size) {
     if (header_.rom_size * 1024 != rom_data.size()) {
       std::cerr << "rom_size_ error\n";
       std::exit(0);
@@ -36,6 +37,7 @@ class Cartridge {
   const CartridgeHeader header_;
   const std::shared_ptr<Mbc> mbc_;
   const std::vector<uint8_t> rom_data_;
+  std::vector<uint8_t> ram_data_;
 };
 
 }  // namespace gbemu
