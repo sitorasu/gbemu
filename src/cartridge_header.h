@@ -52,22 +52,23 @@ struct CartridgeHeader {
   const uint32_t rom_size;  // 単位：KiB
   const uint32_t ram_size;  // 単位：KiB
 
-  explicit CartridgeHeader(const std::vector<uint8_t>& data)
-      : title(GetTitle(data)),
-        target(GetCartridgeTarget(data)),
-        type(GetCartridgeType(data)),
-        rom_size(GetRomSize(data)),
-        ram_size(GetRamSize(data)) {}
+  explicit CartridgeHeader(const std::vector<uint8_t>& rom_data)
+      : title(GetTitle(rom_data)),
+        target(GetCartridgeTarget(rom_data)),
+        type(GetCartridgeType(rom_data)),
+        rom_size(GetRomSize(rom_data)),
+        ram_size(GetRamSize(rom_data)) {}
   ~CartridgeHeader() {}
 
   void Print();
 
  private:
-  static std::string GetTitle(const std::vector<uint8_t>& data);
-  static CartridgeTarget GetCartridgeTarget(const std::vector<uint8_t>& data);
-  static CartridgeType GetCartridgeType(const std::vector<uint8_t>& data);
-  static uint32_t GetRomSize(const std::vector<uint8_t>& data);
-  static uint32_t GetRamSize(const std::vector<uint8_t>& data);
+  static std::string GetTitle(const std::vector<uint8_t>& rom_data);
+  static CartridgeTarget GetCartridgeTarget(
+      const std::vector<uint8_t>& rom_data);
+  static CartridgeType GetCartridgeType(const std::vector<uint8_t>& rom_data);
+  static uint32_t GetRomSize(const std::vector<uint8_t>& rom_data);
+  static uint32_t GetRamSize(const std::vector<uint8_t>& rom_data);
   static std::string GetCartridgeTargetString(CartridgeTarget target);
   static std::string GetCartridgeTypeString(CartridgeType type);
 };

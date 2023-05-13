@@ -14,15 +14,17 @@ using uint8_t = std::uint8_t;
 using uint32_t = std::uint32_t;
 
 // ROMの$0134-0143（title, 16バイト）を取得
-std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& data) {
-  return std::string(reinterpret_cast<const char*>(&data[0x134]), 16);
+std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& rom_data) {
+  auto title_size =
+      GetCartridgeTarget(rom_data) == CartridgeTarget::kGb ? 16 : 15;
+  return std::string(reinterpret_cast<const char*>(&rom_data[0x134]),
+                     title_size);
 }
 
 // $0143（CGB flag）を取得
-// このアドレスはtitleの末尾と被っている。意味のある値が入っている場合はtitleの末尾を削除する。
 CartridgeTarget CartridgeHeader::GetCartridgeTarget(
-    const std::vector<uint8_t>& data) {
-  uint8_t value = data[0x143];
+    const std::vector<uint8_t>& rom_data) {
+  uint8_t value = rom_data[0x143];
   switch (value) {
     case 0x80:
       return CartridgeTarget::kGbAndGbc;
@@ -41,8 +43,8 @@ CartridgeTarget CartridgeHeader::GetCartridgeTarget(
 
 // $0147（Cartridge type）を取得
 CartridgeType CartridgeHeader::GetCartridgeType(
-    const std::vector<uint8_t>& data) {
-  uint8_t value = data[0x147];
+    const std::vector<uint8_t>& rom_data) {
+  uint8_t value = rom_data[0x147];
   switch (value) {
     case 0x00:
       return CartridgeType::kRomOnly;
@@ -58,8 +60,8 @@ CartridgeType CartridgeHeader::GetCartridgeType(
 }
 
 // $0148（ROM size）を取得
-uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& data) {
-  uint8_t value = data[0x148];
+uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& rom_data) {
+  uint8_t value = rom_data[0x148];
   if (0 <= value && value <= 8) {
     return (32 << value);
   } else {
@@ -70,8 +72,8 @@ uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& data) {
 }
 
 // $0149（RAM size）を取得
-uint32_t CartridgeHeader::GetRamSize(const std::vector<uint8_t>& data) {
-  uint8_t value = data[0x149];
+uint32_t CartridgeHeader::GetRamSize(const std::vector<uint8_t>& rom_data) {
+  uint8_t value = rom_data[0x149];
   switch (value) {
     case 0x00:
       return 0;
