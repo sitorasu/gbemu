@@ -17,6 +17,7 @@ using std::uint8_t;
 namespace {
 
 std::vector<uint8_t> LoadRom(const std::string& path) {
+  // ROMファイルをオープン
   std::ifstream ifs(path, std::ios_base::in | std::ios_base::binary);
   if (ifs.fail()) {
     std::cerr << "File open error: " << path << "\n";
@@ -47,7 +48,7 @@ std::vector<uint8_t> LoadRom(const std::string& path) {
 int main(int argc, char* argv[]) {
   // コマンドラインの書式をチェック
   if (argc < 2) {
-    std::cerr << "usage: gbemu ROM_FILE\n";
+    std::cerr << "usage: gbemu <rom_file>\n";
     return 0;
   }
 
