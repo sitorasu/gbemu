@@ -13,6 +13,14 @@
 
 namespace gbemu {
 
+// カートリッジを表すクラス。Mbcを介して操作する。
+// Example:
+//    std::vector<std::uint8_t> rom = LoadRom();
+//    Cartridge cartridge(std::move(rom));
+//    std::uint16_t address1 = 0x3000;
+//    std::uint8_t result = cartridge.mbc().Read8(address1);
+//    std::uint16_t address2 = 0xC000;
+//    cartridge.mbc().Write8(address2, 0xFF);
 class Cartridge {
  private:
   using uint8_t = std::uint8_t;
@@ -26,18 +34,18 @@ class Cartridge {
         rom_(std::move(rom)),
         ram_(header_.ram_size),
         mbc_(Mbc::Create(header_.type, rom_, ram_)) {
-    if (header_.rom_size * 1024 != rom.size()) {
-      std::cerr << "rom_size_ error\n";
+    if (header_.rom_size * 1024 != rom_.size()) {
+      std::cerr << " ROM size does not match header\n";
       std::exit(0);
     }
   }
-  std::shared_ptr<Mbc> mbc() { return mbc_; }
+  Mbc& mbc() { return *mbc_; }
 
  private:
   const CartridgeHeader header_;
   const std::vector<uint8_t> rom_;
   std::vector<uint8_t> ram_;
-  const std::shared_ptr<Mbc> mbc_;
+  std::unique_ptr<Mbc> mbc_;
 };
 
 }  // namespace gbemu

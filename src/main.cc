@@ -7,7 +7,7 @@
 #include <iterator>
 #include <vector>
 
-#include "cartridge_header.h"
+#include "cartridge.h"
 
 using namespace gbemu;
 using std::uint16_t;
@@ -45,7 +45,8 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  CartridgeHeader::Create(rom);
+  Cartridge cartridge(std::move(rom));
+  cartridge.mbc().Read8(0);
 
   return 0;
 }

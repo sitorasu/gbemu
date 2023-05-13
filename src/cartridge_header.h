@@ -7,7 +7,11 @@
 
 namespace gbemu {
 
-// いったん生成したらメンバ変数の値は変更できない
+// カートリッジのヘッダの情報を取得・記憶する。
+// Example:
+//     std::vector<std::uint8_t> rom = LoadRom();
+//     CartridgeHeader header = CartridgeHeader::Create(rom);
+//     auto rom_size = header.rom_size;
 struct CartridgeHeader {
   using uint8_t = std::uint8_t;
   using uint32_t = std::uint32_t;
@@ -52,9 +56,11 @@ struct CartridgeHeader {
   const uint32_t rom_size;  // 単位：KiB
   const uint32_t ram_size;  // 単位：KiB
 
+  // `rom`の先頭0x150バイトをカートリッジヘッダとして読み込みインスタンスを生成する
   static CartridgeHeader Create(const std::vector<uint8_t>& rom);
   ~CartridgeHeader() {}
 
+  // デバッグ用
   void Print();
 
  private:
