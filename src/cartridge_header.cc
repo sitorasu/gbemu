@@ -13,6 +13,18 @@ using CartridgeType = CartridgeHeader::CartridgeType;
 using uint8_t = std::uint8_t;
 using uint32_t = std::uint32_t;
 
+CartridgeHeader CartridgeHeader::Create(const std::vector<uint8_t>& rom_data) {
+  auto size = rom_data.size();
+  constexpr auto kHeaderSize = 0x150;
+  if (size < kHeaderSize) {
+    std::cerr << "ROM format error\n";
+    std::exit(0);
+  }
+  CartridgeHeader header(rom_data);
+  header.Print();
+  return header;
+}
+
 // ROMの$0134-0143（title, 16バイト）を取得
 std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& rom_data) {
   auto title_size =

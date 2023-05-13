@@ -2,6 +2,8 @@
 #define GBEMU_CARTRIDGE_H_
 
 #include <cstdint>
+#include <cstdlib>
+#include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -26,7 +28,13 @@ class Cartridge {
  public:
   // 初期化順序（header_が先）に依存した処理のため注意。
   Cartridge(std::vector<uint8_t>&& rom_data)
-      : header_(rom_data), rom_data_(std::move(rom_data)) {}
+      : header_(CartridgeHeader::Create(rom_data)),
+        rom_data_(std::move(rom_data)) {
+    if (header_.rom_size * 1024 != rom_data.size()) {
+      std::cerr << "rom_size_ error\n";
+      std::exit(0);
+    }
+  }
   uint8_t Read8(uint16_t address) { return mbc_->Read8(address, rom_data_); }
   void Write8(uint16_t address, uint8_t value) { mbc_->Write8(address, value); }
 

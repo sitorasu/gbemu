@@ -10,9 +10,9 @@
 #include "cartridge_header.h"
 
 using namespace gbemu;
-using uint8_t = std::uint8_t;
-using uint16_t = std::uint16_t;
-using uint32_t = std::uint32_t;
+using std::uint16_t;
+using std::uint32_t;
+using std::uint8_t;
 
 int main(int argc, char* argv[]) {
   // コマンドラインの書式をチェック
@@ -45,33 +45,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  // Cartridge headerの分のサイズすらないならエラー
-  if (input_data.size() < 0x150) {
-    std::cerr << "ROM format error\n";
-    return 0;
-  }
-
-  // Cartridge headerの読み出し
-  CartridgeHeader header(input_data);
-  header.Print();
-
-  // Cartridge headerに書かれているサイズと実際のサイズが異なるならエラー
-  if (header.rom_size * 1024 != input_data.size()) {
-    std::cerr << "ROM size error:\n"
-              << "  header's' rom size = " << header.rom_size * 1024 << "\n"
-              << "  actual rom size = " << input_data.size() << "\n";
-    return 0;
-  }
-
-  switch (header.type) {
-    case CartridgeHeader::CartridgeType::kRomOnly:
-      break;
-    case CartridgeHeader::CartridgeType::kMbc1:
-      break;
-    default:
-      std::cerr << "Not implemented cartridge type.\n";
-      return 0;
-  }
+  CartridgeHeader::Create(input_data);
 
   return 0;
 }
