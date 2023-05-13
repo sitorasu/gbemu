@@ -20,13 +20,13 @@ class Cartridge {
   using uint32_t = std::uint32_t;
 
  public:
-  // 初期化順序（header_, mbc_, rom_dataの順）に依存した処理のため注意。
-  Cartridge(std::vector<uint8_t>&& rom_data)
-      : header_(CartridgeHeader::Create(rom_data)),
-        mbc_(Mbc::Create(header_.type)),
-        rom_data_(std::move(rom_data)),
-        ram_data_(header_.ram_size) {
-    if (header_.rom_size * 1024 != rom_data.size()) {
+  // 初期化順序（header_, rom_, ram_, mbc_の順）に依存した処理のため注意。
+  Cartridge(std::vector<uint8_t>&& rom)
+      : header_(CartridgeHeader::Create(rom)),
+        rom_(std::move(rom)),
+        ram_(header_.ram_size),
+        mbc_(Mbc::Create(header_.type, rom_, ram_)) {
+    if (header_.rom_size * 1024 != rom.size()) {
       std::cerr << "rom_size_ error\n";
       std::exit(0);
     }
@@ -35,9 +35,9 @@ class Cartridge {
 
  private:
   const CartridgeHeader header_;
+  const std::vector<uint8_t> rom_;
+  std::vector<uint8_t> ram_;
   const std::shared_ptr<Mbc> mbc_;
-  const std::vector<uint8_t> rom_data_;
-  std::vector<uint8_t> ram_data_;
 };
 
 }  // namespace gbemu

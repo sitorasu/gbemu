@@ -18,15 +18,15 @@ class Mbc {
   virtual uint8_t Read8(uint16_t address) = 0;
   virtual void Write8(uint16_t address, uint8_t value) = 0;
   static std::shared_ptr<Mbc> Create(CartridgeHeader::CartridgeType type,
-                                     const std::vector<uint8_t>& rom_data,
-                                     std::vector<uint8_t>& ram_data);
-  Mbc(const std::vector<uint8_t>& rom_data, std::vector<uint8_t>& ram_data)
-      : rom_data_(rom_data), ram_data_(ram_data) {}
+                                     const std::vector<uint8_t>& rom,
+                                     std::vector<uint8_t>& ram);
+  Mbc(const std::vector<uint8_t>& rom, std::vector<uint8_t>& ram)
+      : rom_(rom), ram_(ram) {}
   virtual ~Mbc() = default;
 
  protected:
-  const std::vector<uint8_t>& rom_data_;
-  std::vector<uint8_t>& ram_data_;
+  const std::vector<uint8_t>& rom_;
+  std::vector<uint8_t>& ram_;
 };
 
 }  // namespace gbemu

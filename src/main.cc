@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
   // ROMファイルを読み出す
   std::istreambuf_iterator<char> it_ifs_begin(ifs);
   std::istreambuf_iterator<char> it_ifs_end{};
-  std::vector<uint8_t> input_data(it_ifs_begin, it_ifs_end);
+  std::vector<uint8_t> rom(it_ifs_begin, it_ifs_end);
   if (ifs.fail()) {
     std::cerr << "File read error: " << path << "\n";
     return 0;
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
-  CartridgeHeader::Create(input_data);
+  CartridgeHeader::Create(rom);
 
   return 0;
 }

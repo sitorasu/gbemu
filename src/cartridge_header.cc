@@ -13,30 +13,28 @@ using CartridgeType = CartridgeHeader::CartridgeType;
 using uint8_t = std::uint8_t;
 using uint32_t = std::uint32_t;
 
-CartridgeHeader CartridgeHeader::Create(const std::vector<uint8_t>& rom_data) {
-  auto size = rom_data.size();
+CartridgeHeader CartridgeHeader::Create(const std::vector<uint8_t>& rom) {
+  auto size = rom.size();
   constexpr auto kHeaderSize = 0x150;
   if (size < kHeaderSize) {
     std::cerr << "ROM format error\n";
     std::exit(0);
   }
-  CartridgeHeader header(rom_data);
+  CartridgeHeader header(rom);
   header.Print();
   return header;
 }
 
 // ROMの$0134-0143（title, 16バイト）を取得
-std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& rom_data) {
-  auto title_size =
-      GetCartridgeTarget(rom_data) == CartridgeTarget::kGb ? 16 : 15;
-  return std::string(reinterpret_cast<const char*>(&rom_data[0x134]),
-                     title_size);
+std::string CartridgeHeader::GetTitle(const std::vector<uint8_t>& rom) {
+  auto title_size = GetCartridgeTarget(rom) == CartridgeTarget::kGb ? 16 : 15;
+  return std::string(reinterpret_cast<const char*>(&rom[0x134]), title_size);
 }
 
 // $0143（CGB flag）を取得
 CartridgeTarget CartridgeHeader::GetCartridgeTarget(
-    const std::vector<uint8_t>& rom_data) {
-  uint8_t value = rom_data[0x143];
+    const std::vector<uint8_t>& rom) {
+  uint8_t value = rom[0x143];
   switch (value) {
     case 0x80:
       return CartridgeTarget::kGbAndGbc;
@@ -55,8 +53,8 @@ CartridgeTarget CartridgeHeader::GetCartridgeTarget(
 
 // $0147（Cartridge type）を取得
 CartridgeType CartridgeHeader::GetCartridgeType(
-    const std::vector<uint8_t>& rom_data) {
-  uint8_t value = rom_data[0x147];
+    const std::vector<uint8_t>& rom) {
+  uint8_t value = rom[0x147];
   switch (value) {
     case 0x00:
       return CartridgeType::kRomOnly;
@@ -72,8 +70,8 @@ CartridgeType CartridgeHeader::GetCartridgeType(
 }
 
 // $0148（ROM size）を取得
-uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& rom_data) {
-  uint8_t value = rom_data[0x148];
+uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& rom) {
+  uint8_t value = rom[0x148];
   if (0 <= value && value <= 8) {
     return (32 << value);
   } else {
@@ -84,8 +82,8 @@ uint32_t CartridgeHeader::GetRomSize(const std::vector<uint8_t>& rom_data) {
 }
 
 // $0149（RAM size）を取得
-uint32_t CartridgeHeader::GetRamSize(const std::vector<uint8_t>& rom_data) {
-  uint8_t value = rom_data[0x149];
+uint32_t CartridgeHeader::GetRamSize(const std::vector<uint8_t>& rom) {
+  uint8_t value = rom[0x149];
   switch (value) {
     case 0x00:
       return 0;
