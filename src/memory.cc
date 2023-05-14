@@ -3,29 +3,23 @@
 #include <cassert>
 #include <cstdint>
 
-namespace gbemu {
+#include "utils.h"
 
-namespace {
-// xが区間[begin, end)に含まれるならtrue、そうでなければfalseを返す
-template <class T1, class T2, class T3>
-bool InRange(T1 x, T2 begin, T3 end) {
-  return begin <= x && x < end;
-}
-}  // namespace
+namespace gbemu {
 
 uint8_t Memory::Read8(std::uint16_t address) {
   if (InRange(address, 0, 0x8000)) {
-    // ROMからの読み出し
-    assert(false);
+    // カートリッジからの読み出し
+    return cartridge_.mbc().Read8(address);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMからの読み出し
     assert(false);
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMからの読み出し
-    assert(false);
+    return cartridge_.mbc().Read8(address);
   } else if (InRange(address, 0xC000, 0xE000)) {
     // Internal RAMからの読み出し
-    assert(false);
+    return internal_ram_.at(address & 0x1FFF);
   } else if (InRange(address, 0xE000, 0xFE00)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
     assert(false);
@@ -50,17 +44,17 @@ uint8_t Memory::Read8(std::uint16_t address) {
 
 void Memory::Write8(std::uint16_t address, std::uint8_t value) {
   if (InRange(address, 0, 0x8000)) {
-    // ROMへの書き込み、つまりMBCの操作
-    assert(false);
+    // カートリッジへの書き込み
+    cartridge_.mbc().Write8(address, value);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMへの書き込み
     assert(false);
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMへの書き込み
-    assert(false);
+    cartridge_.mbc().Write8(address, value);
   } else if (InRange(address, 0xC000, 0xE000)) {
     // Internal RAMへの書き込み
-    assert(false);
+    internal_ram_.at(address & 0x1FFF) = value;
   } else if (InRange(address, 0xE000, 0xFE00)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
     assert(false);

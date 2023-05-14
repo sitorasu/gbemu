@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "cartridge_header.h"
+#include "utils.h"
 
 namespace gbemu {
 
@@ -21,21 +22,9 @@ namespace gbemu {
 class Mbc {
  public:
   // CPUによる`address`からの読み出し要求に対処する。
-  // `address`は$0000-$7FFFまたは$C000-$DFFFの範囲でなければならない。
-  virtual std::uint8_t Read8(std::uint16_t address) {
-    // 引数チェック後、派生クラスごとの処理に移る。
-    assert((0 <= address && address <= 0x7FFF) ||
-           (0xC000 <= address && address <= 0xDFFF));
-    return Read8_(address);
-  }
+  virtual std::uint8_t Read8(std::uint16_t address) = 0;
   // CPUによる`address`への書き込み要求に対処する。
-  // `address`は$0000-$7FFFまたは$C000-$DFFFの範囲でなければならない。
-  virtual void Write8(std::uint16_t address, std::uint8_t value) {
-    // 引数チェック後、派生クラスごとの処理に移る。
-    assert((0 <= address && address <= 0x7FFF) ||
-           (0xC000 <= address && address <= 0xDFFF));
-    Write8_(address, value);
-  }
+  virtual void Write8(std::uint16_t address, std::uint8_t value) = 0;
   // `type`が表すMBCの種類に対応するMbcの派生クラスのインスタンスを生成する。
   static std::unique_ptr<Mbc> Create(CartridgeHeader::CartridgeType type,
                                      const std::vector<std::uint8_t>& rom,
@@ -49,12 +38,6 @@ class Mbc {
   const std::vector<std::uint8_t>& rom_;
   // このMBCが読み書きするRAM。
   std::vector<std::uint8_t>& ram_;
-
- private:
-  // MBCの種類ごとに異なる読み出しの処理。
-  virtual std::uint8_t Read8_(std::uint16_t address) = 0;
-  // MBCの種類ごとに異なる書き込みの処理。
-  virtual void Write8_(std::uint16_t address, std::uint8_t value) = 0;
 };
 
 }  // namespace gbemu

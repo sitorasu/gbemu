@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "cartridge_header.h"
+#include "utils.h"
 
 namespace gbemu {
 
@@ -16,11 +17,10 @@ class RomOnly : public Mbc {
       : Mbc(rom, ram) {}
   ~RomOnly() override = default;
 
- private:
-  std::uint8_t Read8_(std::uint16_t address) override {
+  std::uint8_t Read8(std::uint16_t address) override {
     return rom_.at(address);
   }
-  void Write8_(std::uint16_t address, std::uint8_t value) override {
+  void Write8(std::uint16_t /* address */, std::uint8_t /* value */) override {
     // 何もしない
   }
 };
@@ -31,11 +31,102 @@ class Mbc1 : public Mbc {
       : Mbc(rom, ram) {}
   ~Mbc1() override = default;
 
- private:
-  std::uint8_t Read8_(std::uint16_t address) override { assert(false); }
-  void Write8_(std::uint16_t address, std::uint8_t value) override {
+  std::uint8_t Read8(std::uint16_t address) override {
+    if (InRange(address, 0, 0x4000)) {
+      std::uint32_t rom_address;
+      if (registers.ram_banking_mode) {
+        rom_address = address;
+        rom_address |= registers.ram_bank_number << 19;
+        rom_address %= rom_.size();
+      } else {
+        rom_address = address;
+      }
+      return rom_.at(rom_address);
+    }
+
+    if (InRange(address, 0x4000, 0x8000)) {
+      // ROM Bank Numberレジスタが0の場合は1として扱う
+      std::uint8_t rom_bank_number = registers.rom_bank_number;
+      if (rom_bank_number == 0) {
+        rom_bank_number = 1;
+      }
+
+      std::uint32_t rom_address = 0;
+      rom_address |= registers.ram_bank_number << 19;
+      rom_address |= rom_bank_number << 14;
+      rom_address |= address & 0x3FFF;
+      rom_address %= rom_.size();
+      return rom_.at(rom_address);
+    }
+
+    if (InRange(address, 0xA000, 0xC000)) {
+      if (!registers.ram_enable || ram_.size() == 0) {
+        return 0xFF;  // open bus value
+      }
+
+      std::uint16_t ram_address = address & 0x1FFF;
+      if (registers.ram_banking_mode) {
+        ram_address |= registers.ram_bank_number << 13;
+        ram_address %= ram_.size();
+      }
+
+      return ram_.at(ram_address);
+    }
+
     assert(false);
   }
+
+  void Write8(std::uint16_t address, std::uint8_t value) override {
+    if (InRange(address, 0, 0x2000)) {
+      bool ram_enable = (value & 0xF) == 0xA;
+      registers.ram_enable = ram_enable;
+      return;
+    }
+
+    if (InRange(address, 0x2000, 0x4000)) {
+      std::uint8_t rom_bank_number = value & 0x1F;
+      registers.rom_bank_number = rom_bank_number;
+      return;
+    }
+
+    if (InRange(address, 0x4000, 0x6000)) {
+      std::uint8_t ram_bank_number = value & 0x3;
+      registers.ram_bank_number = ram_bank_number;
+      return;
+    }
+
+    if (InRange(address, 0x6000, 0x8000)) {
+      bool ram_banking_mode = value & 0x1;
+      registers.ram_banking_mode = ram_banking_mode;
+      return;
+    }
+
+    if (InRange(address, 0xA000, 0xC000)) {
+      if (!registers.ram_enable || ram_.size() == 0) {
+        return;
+      }
+
+      std::uint16_t ram_address = address & 0x1FFF;
+      if (registers.ram_banking_mode) {
+        ram_address |= registers.ram_bank_number << 13;
+        ram_address %= ram_.size();
+      }
+
+      ram_.at(ram_address) = value;
+      return;
+    }
+
+    assert(false);
+  }
+
+ private:
+  struct Registers {
+    bool ram_enable;
+    std::uint8_t rom_bank_number;
+    std::uint8_t ram_bank_number;
+    bool ram_banking_mode;
+  };
+  Registers registers;
 };
 
 std::unique_ptr<Mbc> Mbc::Create(CartridgeHeader::CartridgeType type,
