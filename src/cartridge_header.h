@@ -57,14 +57,16 @@ struct CartridgeHeader {
   const uint32_t ram_size;  // 単位：KiB
 
   // `rom`の先頭0x150バイトをカートリッジヘッダとして読み込みインスタンスを生成する。
-  // `rom`が0x150バイトに満たない場合は以上終了する。
+  // `rom`が0x150バイトに満たない場合はプログラムを終了する。
   static CartridgeHeader Create(const std::vector<uint8_t>& rom);
   ~CartridgeHeader() {}
 
-  // デバッグ用
+  // 各メンバ変数の値を標準出力に出力する（デバッグ用）
   void Print();
 
  private:
+  // `rom`の先頭0x150バイトをカートリッジヘッダとして読み込みインスタンスを生成する。
+  // このコンストラクタを直接呼ぶのではなくCreateを使用すること。
   explicit CartridgeHeader(const std::vector<uint8_t>& rom)
       : title(GetTitle(rom)),
         target(GetCartridgeTarget(rom)),
@@ -73,21 +75,21 @@ struct CartridgeHeader {
         ram_size(GetRamSize(rom)) {}
   // ROMのタイトルを取得する
   static std::string GetTitle(const std::vector<uint8_t>& rom);
-  // ROMが動作するモデル（GB or GB/GBC or GBC）を取得する
-  // 取得できない場合は異常終了する
+  // ROMが動作するモデル（GB or GB/GBC or GBC）を取得する。
+  // 取得できない場合はプログラムを終了する。
   static CartridgeTarget GetCartridgeTarget(const std::vector<uint8_t>& rom);
-  // ROMのMBCの種類を取得する
-  // 取得できない場合は異常終了する
+  // ROMのMBCの種類を取得する。
+  // 取得できない場合はプログラムを終了する。
   static CartridgeType GetCartridgeType(const std::vector<uint8_t>& rom);
-  // ROMのサイズを取得する
-  // 取得できない場合は異常終了する
+  // ROMのサイズを取得する。
+  // 取得できない場合はプログラムを終了する。
   static uint32_t GetRomSize(const std::vector<uint8_t>& rom);
-  // カートリッジに内蔵されたRAMのサイズを取得する
-  // 取得できない場合は異常終了する
+  // カートリッジに内蔵されたRAMのサイズを取得する。
+  // 取得できない場合はプログラムを終了する。
   static uint32_t GetRamSize(const std::vector<uint8_t>& rom);
-  // CartridgeTargetの値を文字列に変換する
+  // CartridgeTargetの値を文字列に変換する。
   static std::string GetCartridgeTargetString(CartridgeTarget target);
-  // CartridgeTypeの値を文字列に変換する
+  // CartridgeTypeの値を文字列に変換する。
   static std::string GetCartridgeTypeString(CartridgeType type);
 };
 

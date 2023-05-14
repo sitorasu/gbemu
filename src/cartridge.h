@@ -28,6 +28,8 @@ class Cartridge {
   using uint32_t = std::uint32_t;
 
  public:
+  // `rom`の内容をもとにインスタンスを生成する。
+  // `rom`の内容が不正な場合はプログラムを終了する。
   // 初期化順序（header_, rom_, ram_, mbc_の順）に依存した処理のため注意。
   Cartridge(std::vector<uint8_t>&& rom)
       : header_(CartridgeHeader::Create(rom)),

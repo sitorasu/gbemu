@@ -27,6 +27,7 @@ class Mbc {
   // CPUによる`address`からの読み出し要求に対処する。
   // `address`は$0000-$7FFFまたは$C000-$DFFFの範囲でなければならない。
   virtual uint8_t Read8(uint16_t address) {
+    // 引数チェック後、派生クラスごとの処理に移る。
     assert((0 <= address && address <= 0x7FFF) ||
            (0xC000 <= address && address <= 0xDFFF));
     return Read8_(address);
@@ -34,6 +35,7 @@ class Mbc {
   // CPUによる`address`への書き込み要求に対処する。
   // `address`は$0000-$7FFFまたは$C000-$DFFFの範囲でなければならない。
   virtual void Write8(uint16_t address, uint8_t value) {
+    // 引数チェック後、派生クラスごとの処理に移る。
     assert((0 <= address && address <= 0x7FFF) ||
            (0xC000 <= address && address <= 0xDFFF));
     Write8_(address, value);

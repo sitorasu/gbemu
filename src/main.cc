@@ -16,6 +16,8 @@ using std::uint8_t;
 
 namespace {
 
+// `path`のファイルを読み出す。
+// 読み出しに失敗したらプログラムを終了する。
 std::vector<uint8_t> LoadRom(const std::string& path) {
   // ROMファイルをオープン
   std::ifstream ifs(path, std::ios_base::in | std::ios_base::binary);
