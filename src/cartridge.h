@@ -22,16 +22,11 @@ namespace gbemu {
 //    std::uint16_t address2 = 0xC000;
 //    cartridge.mbc().Write8(address2, 0xFF);
 class Cartridge {
- private:
-  using uint8_t = std::uint8_t;
-  using uint16_t = std::uint16_t;
-  using uint32_t = std::uint32_t;
-
  public:
   // `rom`の内容をもとにインスタンスを生成する。
   // `rom`の内容が不正な場合はプログラムを終了する。
   // 初期化順序（header_, rom_, ram_, mbc_の順）に依存した処理のため注意。
-  Cartridge(std::vector<uint8_t>&& rom)
+  Cartridge(std::vector<std::uint8_t>&& rom)
       : header_(CartridgeHeader::Create(rom)),
         rom_(std::move(rom)),
         ram_(header_.ram_size),
@@ -45,8 +40,8 @@ class Cartridge {
 
  private:
   const CartridgeHeader header_;
-  const std::vector<uint8_t> rom_;
-  std::vector<uint8_t> ram_;
+  const std::vector<std::uint8_t> rom_;
+  std::vector<std::uint8_t> ram_;
   std::unique_ptr<Mbc> mbc_;
 };
 

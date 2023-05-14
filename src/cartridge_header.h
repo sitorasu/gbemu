@@ -13,9 +13,6 @@ namespace gbemu {
 //     CartridgeHeader header = CartridgeHeader::Create(rom);
 //     auto rom_size = header.rom_size;
 struct CartridgeHeader {
-  using uint8_t = std::uint8_t;
-  using uint32_t = std::uint32_t;
-
   const std::string title;
 
   enum class CartridgeTarget { kGb, kGbAndGbc, kGbc };
@@ -53,12 +50,12 @@ struct CartridgeHeader {
   };
   const CartridgeType type;
 
-  const uint32_t rom_size;  // 単位：KiB
-  const uint32_t ram_size;  // 単位：KiB
+  const std::uint32_t rom_size;  // 単位：KiB
+  const std::uint32_t ram_size;  // 単位：KiB
 
   // `rom`の先頭0x150バイトをカートリッジヘッダとして読み込みインスタンスを生成する。
   // `rom`が0x150バイトに満たない場合はプログラムを終了する。
-  static CartridgeHeader Create(const std::vector<uint8_t>& rom);
+  static CartridgeHeader Create(const std::vector<std::uint8_t>& rom);
   ~CartridgeHeader() {}
 
   // 各メンバ変数の値を標準出力に出力する（デバッグ用）
@@ -67,26 +64,27 @@ struct CartridgeHeader {
  private:
   // `rom`の先頭0x150バイトをカートリッジヘッダとして読み込みインスタンスを生成する。
   // このコンストラクタを直接呼ぶのではなくCreateを使用すること。
-  explicit CartridgeHeader(const std::vector<uint8_t>& rom)
+  explicit CartridgeHeader(const std::vector<std::uint8_t>& rom)
       : title(GetTitle(rom)),
         target(GetCartridgeTarget(rom)),
         type(GetCartridgeType(rom)),
         rom_size(GetRomSize(rom)),
         ram_size(GetRamSize(rom)) {}
   // ROMのタイトルを取得する
-  static std::string GetTitle(const std::vector<uint8_t>& rom);
+  static std::string GetTitle(const std::vector<std::uint8_t>& rom);
   // ROMが動作するモデル（GB or GB/GBC or GBC）を取得する。
   // 取得できない場合はプログラムを終了する。
-  static CartridgeTarget GetCartridgeTarget(const std::vector<uint8_t>& rom);
+  static CartridgeTarget GetCartridgeTarget(
+      const std::vector<std::uint8_t>& rom);
   // ROMのMBCの種類を取得する。
   // 取得できない場合はプログラムを終了する。
-  static CartridgeType GetCartridgeType(const std::vector<uint8_t>& rom);
+  static CartridgeType GetCartridgeType(const std::vector<std::uint8_t>& rom);
   // ROMのサイズを取得する。
   // 取得できない場合はプログラムを終了する。
-  static uint32_t GetRomSize(const std::vector<uint8_t>& rom);
+  static std::uint32_t GetRomSize(const std::vector<std::uint8_t>& rom);
   // カートリッジに内蔵されたRAMのサイズを取得する。
   // 取得できない場合はプログラムを終了する。
-  static uint32_t GetRamSize(const std::vector<uint8_t>& rom);
+  static std::uint32_t GetRamSize(const std::vector<std::uint8_t>& rom);
   // CartridgeTargetの値を文字列に変換する。
   static std::string GetCartridgeTargetString(CartridgeTarget target);
   // CartridgeTypeの値を文字列に変換する。

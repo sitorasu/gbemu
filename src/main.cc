@@ -10,15 +10,12 @@
 #include "cartridge.h"
 
 using namespace gbemu;
-using std::uint16_t;
-using std::uint32_t;
-using std::uint8_t;
 
 namespace {
 
 // `path`のファイルを読み出す。
 // 読み出しに失敗したらプログラムを終了する。
-std::vector<uint8_t> LoadRom(const std::string& path) {
+std::vector<std::uint8_t> LoadRom(const std::string& path) {
   // ROMファイルをオープン
   std::ifstream ifs(path, std::ios_base::in | std::ios_base::binary);
   if (ifs.fail()) {
@@ -29,7 +26,7 @@ std::vector<uint8_t> LoadRom(const std::string& path) {
   // ROMファイルを読み出す
   std::istreambuf_iterator<char> it_ifs_begin(ifs);
   std::istreambuf_iterator<char> it_ifs_end{};
-  std::vector<uint8_t> rom(it_ifs_begin, it_ifs_end);
+  std::vector<std::uint8_t> rom(it_ifs_begin, it_ifs_end);
   if (ifs.fail()) {
     std::cerr << "File read error: " << path << "\n";
     std::exit(0);
@@ -55,7 +52,7 @@ int main(int argc, char* argv[]) {
   }
 
   // ROMファイルをロード
-  std::vector<uint8_t> rom(LoadRom(argv[1]));
+  std::vector<std::uint8_t> rom(LoadRom(argv[1]));
 
   Cartridge cartridge(std::move(rom));
   cartridge.mbc().Read8(0);
