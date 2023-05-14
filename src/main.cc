@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "cartridge.h"
+#include "memory.h"
 
 using namespace gbemu;
 
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
   std::vector<std::uint8_t> rom(LoadRom(argv[1]));
 
   Cartridge cartridge(std::move(rom));
-  cartridge.mbc().Read8(0);
+  Memory memory(cartridge);
 
   return 0;
 }
