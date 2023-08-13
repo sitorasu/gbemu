@@ -34,9 +34,9 @@ class Mbc1 : public Mbc {
   std::uint8_t Read8(std::uint16_t address) override {
     if (InRange(address, 0, 0x4000)) {
       std::uint32_t rom_address;
-      if (registers.ram_banking_mode) {
+      if (registers_.ram_banking_mode) {
         rom_address = address;
-        rom_address |= registers.ram_bank_number << 19;
+        rom_address |= registers_.ram_bank_number << 19;
         rom_address %= rom_.size();
       } else {
         rom_address = address;
@@ -46,13 +46,13 @@ class Mbc1 : public Mbc {
 
     if (InRange(address, 0x4000, 0x8000)) {
       // ROM Bank Numberレジスタが0の場合は1として扱う
-      std::uint8_t rom_bank_number = registers.rom_bank_number;
+      std::uint8_t rom_bank_number = registers_.rom_bank_number;
       if (rom_bank_number == 0) {
         rom_bank_number = 1;
       }
 
       std::uint32_t rom_address = 0;
-      rom_address |= registers.ram_bank_number << 19;
+      rom_address |= registers_.ram_bank_number << 19;
       rom_address |= rom_bank_number << 14;
       rom_address |= address & 0x3FFF;
       rom_address %= rom_.size();
@@ -60,13 +60,13 @@ class Mbc1 : public Mbc {
     }
 
     if (InRange(address, 0xA000, 0xC000)) {
-      if (!registers.ram_enable || ram_.size() == 0) {
+      if (!registers_.ram_enable || ram_.size() == 0) {
         return 0xFF;  // open bus value
       }
 
       std::uint16_t ram_address = address & 0x1FFF;
-      if (registers.ram_banking_mode) {
-        ram_address |= registers.ram_bank_number << 13;
+      if (registers_.ram_banking_mode) {
+        ram_address |= registers_.ram_bank_number << 13;
         ram_address %= ram_.size();
       }
 
@@ -79,36 +79,36 @@ class Mbc1 : public Mbc {
   void Write8(std::uint16_t address, std::uint8_t value) override {
     if (InRange(address, 0, 0x2000)) {
       bool ram_enable = (value & 0xF) == 0xA;
-      registers.ram_enable = ram_enable;
+      registers_.ram_enable = ram_enable;
       return;
     }
 
     if (InRange(address, 0x2000, 0x4000)) {
       std::uint8_t rom_bank_number = value & 0x1F;
-      registers.rom_bank_number = rom_bank_number;
+      registers_.rom_bank_number = rom_bank_number;
       return;
     }
 
     if (InRange(address, 0x4000, 0x6000)) {
       std::uint8_t ram_bank_number = value & 0x3;
-      registers.ram_bank_number = ram_bank_number;
+      registers_.ram_bank_number = ram_bank_number;
       return;
     }
 
     if (InRange(address, 0x6000, 0x8000)) {
       bool ram_banking_mode = value & 0x1;
-      registers.ram_banking_mode = ram_banking_mode;
+      registers_.ram_banking_mode = ram_banking_mode;
       return;
     }
 
     if (InRange(address, 0xA000, 0xC000)) {
-      if (!registers.ram_enable || ram_.size() == 0) {
+      if (!registers_.ram_enable || ram_.size() == 0) {
         return;
       }
 
       std::uint16_t ram_address = address & 0x1FFF;
-      if (registers.ram_banking_mode) {
-        ram_address |= registers.ram_bank_number << 13;
+      if (registers_.ram_banking_mode) {
+        ram_address |= registers_.ram_bank_number << 13;
         ram_address %= ram_.size();
       }
 
@@ -126,7 +126,7 @@ class Mbc1 : public Mbc {
     std::uint8_t ram_bank_number;
     bool ram_banking_mode;
   };
-  Registers registers;
+  Registers registers_;
 };
 
 std::unique_ptr<Mbc> Mbc::Create(CartridgeHeader::CartridgeType type,

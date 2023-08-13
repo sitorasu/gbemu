@@ -24,9 +24,9 @@
   * なるべく描画の間隔が一定になるように動的にフレームレートを調整するとかできると思うけどそれは先の話
 
 ## コーディング規約
-[Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)に従う。代表的なルールを以下に書いておく。
-* ソースファイルの拡張子は`cc`、ヘッダファイルの拡張子は`h`（[File Names](https://google.github.io/styleguide/cppguide.html#File_Names)）
-* ファイル名はスネークケース（[File Names](https://google.github.io/styleguide/cppguide.html#File_Names)）
+* [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html)に従う。代表的なルールを以下に書いておく。
+  * ソースファイルの拡張子は`cc`、ヘッダファイルの拡張子は`h`（[File Names](https://google.github.io/styleguide/cppguide.html#File_Names)）
+  * ファイル名はスネークケース（[File Names](https://google.github.io/styleguide/cppguide.html#File_Names)）
 * ドキュメントやコメントやコミットメッセージなどは日本語で書く
 
 ## 検討中
@@ -46,7 +46,7 @@
 
 ## 目下やること
 - [x] テスト用ROM（cpu_instrs, instr_timing）を用意する
-- [ ] MBC1を実装する（テスト用ROMがMBC1なので）
+- [x] MBC1を実装する（テスト用ROMがMBC1なので）
 - [ ] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
 - [ ] CPUを実装してinstr_timingを通す（シリアル出力で確認）
 - [ ] PPUを実装してテスト用ROMを通す

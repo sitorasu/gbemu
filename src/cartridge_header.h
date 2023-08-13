@@ -7,7 +7,7 @@
 
 namespace gbemu {
 
-// カートリッジのヘッダの情報を取得・記憶する。
+// カートリッジのヘッダの情報を取得・記憶する構造体。
 // Example:
 //     std::vector<std::uint8_t> rom = LoadRom();
 //     CartridgeHeader header = CartridgeHeader::Create(rom);

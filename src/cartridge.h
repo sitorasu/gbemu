@@ -29,10 +29,10 @@ class Cartridge {
   Cartridge(std::vector<std::uint8_t>&& rom)
       : header_(CartridgeHeader::Create(rom)),
         rom_(std::move(rom)),
-        ram_(header_.ram_size),
+        ram_(header_.ram_size * 1024),
         mbc_(Mbc::Create(header_.type, rom_, ram_)) {
     if (header_.rom_size * 1024 != rom_.size()) {
-      std::cerr << " ROM size does not match header\n";
+      std::cerr << "ROM size does not match header\n";
       std::exit(0);
     }
   }
