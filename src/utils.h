@@ -1,9 +1,54 @@
 #ifndef GBEMU_UTILS_H_
 #define GBEMU_UTILS_H_
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 namespace gbemu {
 
-void MyAssert(bool cond, const char* fmt, ...);
+// プログラムの設計が正しければ成り立つはずの条件を表明するマクロ。
+// 表明した条件が成り立たなければエラーを報告してプログラムを終了する。
+// 異常系のエラーとして使用すること。
+// 第1引数に条件、第2引数にエラーメッセージのフォーマット文字列、
+// 第3引数以降にフォーマット文字列に埋め込む値を指定する。
+// エラーの文字列の末尾は改行される。
+// 使用例: ASSERT(x > 0, "Invalid value: %d", x);
+#define ASSERT(cond, ...)                      \
+  if (!(cond)) {                               \
+    fprintf(stderr, "Assertion failed!\n");    \
+    fprintf(stderr, "  FILE: %s\n", __FILE__); \
+    fprintf(stderr, "  LINE: %d\n", __LINE__); \
+    fprintf(stderr, "  ");                     \
+    fprintf(stderr, __VA_ARGS__);              \
+    fprintf(stderr, "\n");                     \
+    std::exit(1);                              \
+  }
+
+// プログラムの設計が正しければ到達しない制御フローを表明するマクロ。
+// エラーを報告してプログラムを終了する。
+// 異常系のエラーとして使用すること。
+// 第1引数にエラーメッセージのフォーマット文字列、
+// 第2引数以降にフォーマット文字列に埋め込む値を指定する。
+// エラーの文字列の末尾は改行される。
+// 使用例: UNREACHABLE("Invalid state: %d", x);
+#define UNREACHABLE(...)                                    \
+  {                                                         \
+    fprintf(stderr, "Control reached unexpected point!\n"); \
+    fprintf(stderr, "  FILE: %s\n", __FILE__);              \
+    fprintf(stderr, "  LINE: %d\n", __LINE__);              \
+    fprintf(stderr, "  ");                                  \
+    fprintf(stderr, __VA_ARGS__);                           \
+    fprintf(stderr, "\n");                                  \
+    std::exit(1);                                           \
+  }
+
+// エラーを報告してプログラムを終了する。
+// 正常系のエラーとして使用すること。
+// 第1引数にエラーメッセージのフォーマット文字列、
+// 第2引数以降にフォーマット文字列に埋め込む値を指定する。
+// エラーの文字列の末尾は改行される。
+[[noreturn]] void Error(const char* fmt, ...);
 
 // xが区間[begin, end)に含まれるならtrue、そうでなければfalseを返す
 template <class T1, class T2, class T3>

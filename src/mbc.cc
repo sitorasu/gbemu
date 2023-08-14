@@ -1,6 +1,5 @@
 #include "mbc.h"
 
-#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -73,7 +72,7 @@ class Mbc1 : public Mbc {
       return ram_.at(ram_address);
     }
 
-    assert(false);
+    UNREACHABLE("Unknown address: %d", static_cast<int>(address));
   }
 
   void Write8(std::uint16_t address, std::uint8_t value) override {
@@ -116,7 +115,7 @@ class Mbc1 : public Mbc {
       return;
     }
 
-    assert(false);
+    UNREACHABLE("Unknown address: %d", static_cast<int>(address));
   }
 
  private:
@@ -140,7 +139,7 @@ std::unique_ptr<Mbc> Mbc::Create(CartridgeHeader::CartridgeType type,
     case CartridgeHeader::CartridgeType::kMbc1RamBattery:
       return std::make_unique<Mbc1>(rom, ram);
     default:
-      assert(false);
+      UNREACHABLE("Unknown cartridge type.");
   }
 }
 

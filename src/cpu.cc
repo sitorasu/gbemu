@@ -16,16 +16,15 @@ std::uint8_t Cpu::step() {
     opcode = memory_.Read8(pc);
     switch (opcode) {
       default:
-        MyAssert(false, "Unknown opcode: CB %02X", opcode);
+        UNREACHABLE("Unknown opcode: CB %02X", opcode);
     }
   } else {
     // プレフィックスなしのオペコードのデコード
     switch (opcode) {
       default:
-        MyAssert(false, "Unknown opcode: %02X", opcode);
+        UNREACHABLE("Unknown opcode: %02X", opcode);
     }
   }
-  return 0;
 }
 
 }  // namespace gbemu

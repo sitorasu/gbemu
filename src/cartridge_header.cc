@@ -1,10 +1,13 @@
 #include "cartridge_header.h"
 
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "utils.h"
 
 namespace gbemu {
 
@@ -15,8 +18,7 @@ CartridgeHeader CartridgeHeader::Create(const std::vector<std::uint8_t>& rom) {
   auto size = rom.size();
   constexpr auto kHeaderSize = 0x150;
   if (size < kHeaderSize) {
-    std::cerr << "ROM format error\n";
-    std::exit(0);
+    Error("ROM size is too small.");
   }
   CartridgeHeader header(rom);
   header.Print();
@@ -42,9 +44,8 @@ CartridgeTarget CartridgeHeader::GetCartridgeTarget(
       if (isprint(value) || (value == 0x00)) {
         return CartridgeTarget::kGb;
       } else {
-        std::cerr << "Cartridge target error at $0143: "
-                  << static_cast<int>(value) << "\n";
-        std::exit(0);
+        Error("Invalid cartridge header at $0143: %d.",
+              static_cast<int>(value));
       }
   }
 }
@@ -61,9 +62,7 @@ CartridgeType CartridgeHeader::GetCartridgeType(
     case 0x03:
       return CartridgeType::kMbc1RamBattery;
     default:
-      std::cerr << "Cartridge type error at $0147: " << static_cast<int>(value)
-                << "\n";
-      std::exit(0);
+      Error("Invalid cartridge header at $0147: %d.", static_cast<int>(value));
   }
 }
 
@@ -74,9 +73,7 @@ std::uint32_t CartridgeHeader::GetRomSize(
   if (0 <= value && value <= 8) {
     return (32 << value);
   } else {
-    std::cerr << "Cartridge ROM size error at $0148: "
-              << static_cast<int>(value) << "\n";
-    std::exit(0);
+    Error("Invalid cartridge header at $0148: %d.", static_cast<int>(value));
   }
 }
 
@@ -96,9 +93,7 @@ std::uint32_t CartridgeHeader::GetRamSize(
     case 0x05:
       return 64;
     default:
-      std::cerr << "Cartridge RAM size error at $0149: "
-                << static_cast<int>(value) << "\n";
-      std::exit(0);
+      Error("Invalid cartridge header at $0149: %d.", static_cast<int>(value));
   }
 }
 
