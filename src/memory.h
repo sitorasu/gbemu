@@ -24,6 +24,7 @@ class Memory {
       : cartridge_(cartridge), internal_ram_(kInternalRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
   std::uint8_t Read8(std::uint16_t address);
+  std::uint16_t Read16(std::uint16_t address);
   void Write8(std::uint16_t address, std::uint8_t value);
 
  private:

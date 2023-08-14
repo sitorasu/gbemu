@@ -13,7 +13,7 @@ namespace gbemu {
 //     Cartridge cartridge(std::move(rom));
 //     Memory memory(cartridge);
 //     Cpu cpu(memory);
-//     std::uint8_t cycle = cpu.step();
+//     std::uint8_t cycle = cpu.Step();
 class Cpu {
  private:
   class Registers {
@@ -87,9 +87,12 @@ class Cpu {
     registers_.set_pc(0x100);
   }
   // CPUを1命令分進め、経過したクロック数を返す。
-  std::uint8_t step();
+  std::uint8_t Step();
 
  private:
+  std::uint8_t Nop();
+  std::uint8_t Jp();
+
   Registers registers_;
   Memory& memory_;
 };

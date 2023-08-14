@@ -10,6 +10,8 @@
 #include "memory.h"
 #include "utils.h"
 
+static_assert(sizeof(int) >= 2, "Size of int must be larger than 2 bytes.");
+
 using namespace gbemu;
 
 namespace {
@@ -54,7 +56,9 @@ int main(int argc, char* argv[]) {
   Cartridge cartridge(std::move(rom));
   Memory memory(cartridge);
   Cpu cpu(memory);
-  cpu.step();
+  for (;;) {
+    cpu.Step();
+  }
 
   return 0;
 }
