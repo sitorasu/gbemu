@@ -122,11 +122,13 @@ std::string CartridgeHeader::GetCartridgeTypeString(CartridgeType type) {
 }
 
 void CartridgeHeader::Print() {
+  std::cout << "=== Cartridge Infomation ===\n";
   std::cout << "title: " << title << "\n";
   std::cout << "target: " << GetCartridgeTargetString(target) << "\n";
   std::cout << "type: " << GetCartridgeTypeString(type) << "\n";
   std::cout << "rom_size: " << rom_size << " KiB\n";
   std::cout << "ram_size: " << ram_size << " KiB\n";
+  std::cout << "============================\n";
 }
 
 }  // namespace gbemu
