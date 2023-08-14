@@ -7,6 +7,13 @@
 
 namespace gbemu {
 
+// CPUを表すクラス。
+// Example:
+//     std::vector<std::uint8_t> rom = LoadRom();
+//     Cartridge cartridge(std::move(rom));
+//     Memory memory(cartridge);
+//     Cpu cpu(memory);
+//     std::uint8_t cycle = cpu.step();
 class Cpu {
  private:
   class Registers {
@@ -76,9 +83,11 @@ class Cpu {
   };
 
  public:
-  Cpu(Memory& memory) : registers_(), memory_(memory) {}
-  // CPUを1マシンサイクル進める
-  void step();
+  Cpu(Memory& memory) : registers_(), memory_(memory) {
+    registers_.set_pc(0x100);
+  }
+  // CPUを1命令分進め、経過したクロック数を返す。
+  std::uint8_t step();
 
  private:
   Registers registers_;

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "cartridge.h"
+#include "cpu.h"
 #include "memory.h"
 
 using namespace gbemu;
@@ -57,6 +58,8 @@ int main(int argc, char* argv[]) {
 
   Cartridge cartridge(std::move(rom));
   Memory memory(cartridge);
+  Cpu cpu(memory);
+  cpu.step();
 
   return 0;
 }
