@@ -45,7 +45,7 @@ uint8_t Memory::Read8(std::uint16_t address) {
 std::uint16_t Memory::Read16(std::uint16_t address) {
   std::uint8_t lower = Read8(address);
   std::uint8_t upper = Read8(address + 1);
-  return ((upper << 8) | lower);
+  return (((std::uint16_t)upper << 8) | lower);
 }
 
 void Memory::Write8(std::uint16_t address, std::uint8_t value) {
