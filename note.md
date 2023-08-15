@@ -49,7 +49,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
 ## 不明な仕様
 * Pixel FIFOの挙動、それによって決まるmode 3の長さ
 
-## 目下やること
+## マイルストーン
 - [x] テスト用ROM（cpu_instrs, instr_timing）を用意する
 - [x] MBC1を実装する（テスト用ROMがMBC1なので）
 - [ ] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
@@ -57,3 +57,10 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
 - [ ] PPUを実装してテスト用ROMを通す
 - [ ] APUを実装する
 - [ ] cmakeの導入
+
+## ToDo
+- [ ] CartridegeHeaderのコンストラクタを簡素化する
+- [ ] utils.cc/hの関数をUtils名前空間で囲む
+  - 名前空間の命名規則ってどうだっけ
+  - マクロは名前空間の影響を受けるか？
+- [ ] コマンドライン引数を順不同にする

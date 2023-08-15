@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "cartridge.h"
+#include "command_line.h"
 #include "cpu.h"
 #include "memory.h"
 #include "utils.h"
@@ -45,13 +46,10 @@ std::vector<std::uint8_t> LoadRom(const std::string& path) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  // コマンドラインの書式をチェック
-  if (argc < 2) {
-    Error("usage: gbemu <rom_file>");
-  }
+  options.Parse(argc, argv);
 
   // ROMファイルをロード
-  std::vector<std::uint8_t> rom(LoadRom(argv[1]));
+  std::vector<std::uint8_t> rom(LoadRom(options.filename()));
 
   Cartridge cartridge(std::move(rom));
   Memory memory(cartridge);
