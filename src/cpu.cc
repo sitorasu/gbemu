@@ -12,11 +12,34 @@
 
 namespace gbemu {
 
+Cpu::Register8& Cpu::Registers::GetRegister8(unsigned i) {
+  switch (i) {
+    case 0:
+      return b;
+    case 1:
+      return c;
+    case 2:
+      return d;
+    case 3:
+      return e;
+    case 4:
+      return h;
+    case 5:
+      return l;
+    // case 6:
+    //   (HL) になってることが多いので例外扱い
+    case 7:
+      return a;
+    default:
+      UNREACHABLE("Invalid register index: %d", i);
+  }
+}
+
 std::string Cpu::Nop::GetMnemonicString() { return "nop"; }
 
 void Cpu::Nop::Execute(Cpu& cpu) {
-  std::uint16_t pc = cpu.registers_.pc();
-  cpu.registers_.set_pc(pc + length());
+  std::uint16_t pc = cpu.registers_.pc.get();
+  cpu.registers_.pc.set(pc + length());
 }
 
 std::string Cpu::JpU16::GetMnemonicString() {
@@ -25,21 +48,21 @@ std::string Cpu::JpU16::GetMnemonicString() {
   return std::string(buf);
 }
 
-void Cpu::JpU16::Execute(Cpu& cpu) { cpu.registers_.set_pc(imm_); }
+void Cpu::JpU16::Execute(Cpu& cpu) { cpu.registers_.pc.set(imm_); }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
-  std::uint16_t pc = registers_.pc();
+  std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
   UNREACHABLE("Unknown opcode: CB %02X", opcode);
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchNop() {
-  std::uint16_t pc = registers_.pc();
+  std::uint16_t pc = registers_.pc.get();
   return std::shared_ptr<Instruction>(new Nop(pc));
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchJpU16() {
-  std::uint16_t pc = registers_.pc();
+  std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
   std::uint16_t imm = memory_.Read16(pc + 1);
   std::vector<std::uint8_t> raw_code{opcode,
@@ -49,7 +72,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchJpU16() {
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
-  std::uint16_t pc = registers_.pc();
+  std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
   if (opcode == 0xCB) {
     // プレフィックスありの命令の実行
