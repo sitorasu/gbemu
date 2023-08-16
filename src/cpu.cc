@@ -48,6 +48,14 @@ std::string Cpu::JpU16::GetMnemonicString() {
   return std::string(buf);
 }
 
+std::string Cpu::Di::GetMnemonicString() { return "di"; }
+
+void Cpu::Di::Execute(Cpu& cpu) {
+  std::uint8_t pc = cpu.registers_.pc.get();
+  cpu.registers_.pc.set(pc + length());
+  cpu.registers_.ime = false;
+}
+
 void Cpu::JpU16::Execute(Cpu& cpu) { cpu.registers_.pc.set(imm_); }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
@@ -71,6 +79,11 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchJpU16() {
   return std::shared_ptr<Instruction>(new JpU16(std::move(raw_code), pc, imm));
 }
 
+std::shared_ptr<Cpu::Instruction> Cpu::FetchDi() {
+  std::uint16_t pc = registers_.pc.get();
+  return std::shared_ptr<Instruction>(new Di(pc));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -83,6 +96,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   }
   if (opcode == 0xC3) {
     return FetchJpU16();
+  }
+  if (opcode == 0xF3) {
+    return FetchDi();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

@@ -83,6 +83,7 @@ class Cpu {
     Register8Pair hl{h, l};
     Register16 sp{};
     Register16 pc{};
+    bool ime{false};  // BootROM実行後の値はどうなっている？
   };
 
   // 命令を表すクラス。
@@ -134,6 +135,14 @@ class Cpu {
     std::uint16_t imm_;
   };
 
+  class Di : public Instruction {
+   public:
+    Di(std::uint16_t address)
+        : Instruction(std::vector<std::uint8_t>{0xF3}, address, 1, 1) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
@@ -147,6 +156,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchPrefixedInstruction();
   std::shared_ptr<Instruction> FetchNop();
   std::shared_ptr<Instruction> FetchJpU16();
+  std::shared_ptr<Instruction> FetchDi();
 
   Registers registers_;
   Memory& memory_;
