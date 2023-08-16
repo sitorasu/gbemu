@@ -72,7 +72,10 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     Error("Write to $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
-    UNREACHABLE("Write to I/O register is not implemented.");
+    WARN(
+        "Write to I/O register is not implemented (address: $%04X, value: "
+        "%02X).",
+        address, value);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
     UNREACHABLE("Write to HRAM is not implemented.");

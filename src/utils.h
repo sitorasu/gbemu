@@ -43,6 +43,17 @@ namespace gbemu {
     std::exit(1);                                                \
   }
 
+// 警告を出すマクロ。
+#define WARN(...)                                             \
+  {                                                           \
+    std::fprintf(stderr, "Control reached warning point!\n"); \
+    std::fprintf(stderr, "  FILE: %s\n", __FILE__);           \
+    std::fprintf(stderr, "  LINE: %d\n", __LINE__);           \
+    std::fprintf(stderr, "  ");                               \
+    std::fprintf(stderr, __VA_ARGS__);                        \
+    std::fprintf(stderr, "\n");                               \
+  }
+
 // エラーを報告してプログラムを終了する。
 // 正常系のエラーとして使用すること。
 // 第1引数にエラーメッセージのフォーマット文字列、
