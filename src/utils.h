@@ -14,15 +14,15 @@ namespace gbemu {
 // 第3引数以降にフォーマット文字列に埋め込む値を指定する。
 // エラーの文字列の末尾は改行される。
 // 使用例: ASSERT(x > 0, "Invalid value: %d", x);
-#define ASSERT(cond, ...)                      \
-  if (!(cond)) {                               \
-    fprintf(stderr, "Assertion failed!\n");    \
-    fprintf(stderr, "  FILE: %s\n", __FILE__); \
-    fprintf(stderr, "  LINE: %d\n", __LINE__); \
-    fprintf(stderr, "  ");                     \
-    fprintf(stderr, __VA_ARGS__);              \
-    fprintf(stderr, "\n");                     \
-    std::exit(1);                              \
+#define ASSERT(cond, ...)                           \
+  if (!(cond)) {                                    \
+    std::fprintf(stderr, "Assertion failed!\n");    \
+    std::fprintf(stderr, "  FILE: %s\n", __FILE__); \
+    std::fprintf(stderr, "  LINE: %d\n", __LINE__); \
+    std::fprintf(stderr, "  ");                     \
+    std::fprintf(stderr, __VA_ARGS__);              \
+    std::fprintf(stderr, "\n");                     \
+    std::exit(1);                                   \
   }
 
 // プログラムの設計が正しければ到達しない制御フローを表明するマクロ。
@@ -32,15 +32,15 @@ namespace gbemu {
 // 第2引数以降にフォーマット文字列に埋め込む値を指定する。
 // エラーの文字列の末尾は改行される。
 // 使用例: UNREACHABLE("Invalid state: %d", x);
-#define UNREACHABLE(...)                                    \
-  {                                                         \
-    fprintf(stderr, "Control reached unexpected point!\n"); \
-    fprintf(stderr, "  FILE: %s\n", __FILE__);              \
-    fprintf(stderr, "  LINE: %d\n", __LINE__);              \
-    fprintf(stderr, "  ");                                  \
-    fprintf(stderr, __VA_ARGS__);                           \
-    fprintf(stderr, "\n");                                  \
-    std::exit(1);                                           \
+#define UNREACHABLE(...)                                         \
+  {                                                              \
+    std::fprintf(stderr, "Control reached unexpected point!\n"); \
+    std::fprintf(stderr, "  FILE: %s\n", __FILE__);              \
+    std::fprintf(stderr, "  LINE: %d\n", __LINE__);              \
+    std::fprintf(stderr, "  ");                                  \
+    std::fprintf(stderr, __VA_ARGS__);                           \
+    std::fprintf(stderr, "\n");                                  \
+    std::exit(1);                                                \
   }
 
 // エラーを報告してプログラムを終了する。

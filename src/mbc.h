@@ -12,13 +12,13 @@ namespace gbemu {
 
 // MBCのインターフェース。
 // Example:
-//     std::vector<std::uint8_t> rom = LoadRom();
-//     CartridgeHeader header = CartridgeHeader::Create(rom);
-//     std::vector<std::uint8_t> ram(header.ram_size * 1024);
-//     CartridgeHeader::CartridgeType type = header.type;
-//     std::unique_ptr<Mbc> mbc = Mbc::Create(type, rom, ram);
-//     std::uint16_t address = 0x7000;
-//     std::uint8_t result = mbc.Read8(address);
+//   std::vector<std::uint8_t> rom = LoadRom();
+//   CartridgeHeader header = CartridgeHeader::Create(rom);
+//   std::vector<std::uint8_t> ram(header.ram_size * 1024);
+//   CartridgeHeader::CartridgeType type = header.type;
+//   std::unique_ptr<Mbc> mbc = Mbc::Create(type, rom, ram);
+//   std::uint16_t address = 0x7000;
+//   std::uint8_t result = mbc.Read8(address);
 class Mbc {
  public:
   // CPUによる`address`からの読み出し要求に対処する。

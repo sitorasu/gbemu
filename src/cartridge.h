@@ -15,12 +15,12 @@ namespace gbemu {
 
 // カートリッジを表すクラス。Mbcを介して操作する。
 // Example:
-//    std::vector<std::uint8_t> rom = LoadRom();
-//    Cartridge cartridge(std::move(rom));
-//    std::uint16_t address1 = 0x3000;
-//    std::uint8_t result = cartridge.mbc().Read8(address1);
-//    std::uint16_t address2 = 0xC000;
-//    cartridge.mbc().Write8(address2, 0xFF);
+//  std::vector<std::uint8_t> rom = LoadRom();
+//  Cartridge cartridge(std::move(rom));
+//  std::uint16_t address1 = 0x3000;
+//  std::uint8_t result = cartridge.mbc().Read8(address1);
+//  std::uint16_t address2 = 0xC000;
+//  cartridge.mbc().Write8(address2, 0xFF);
 class Cartridge {
  public:
   // `rom`の内容をもとにインスタンスを生成する。

@@ -12,12 +12,12 @@ namespace gbemu {
 // メモリアクセスを各コンポーネントに振り分ける。
 // CPUから見える通りに扱えるというだけで、エミュレータの実装としてはCPU以外が使ってもいい。
 // Example:
-//     std::vector<std::uint8_t> rom = LoadRom();
-//     Cartridge cartridge(std::move(rom));
-//     Memory memory(cartridge);
+//   std::vector<std::uint8_t> rom = LoadRom();
+//   Cartridge cartridge(std::move(rom));
+//   Memory memory(cartridge);
 //
-//     std::uint16_t address = 0x3000;
-//     std::uint8_t result = memory.Read8(address);
+//   std::uint16_t address = 0x3000;
+//   std::uint8_t result = memory.Read8(address);
 class Memory {
  public:
   Memory(Cartridge& cartridge)

@@ -60,7 +60,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
 
 ## ToDo
 - [ ] CartridegeHeaderのコンストラクタを簡素化する
-- [ ] utils.cc/hの関数をUtils名前空間で囲む
+- [ ] utils.cc/hの関数をUtils名前空間で囲む？
   - 名前空間の命名規則ってどうだっけ
   - マクロは名前空間の影響を受けるか？
 - [ ] コマンドライン引数を順不同にする

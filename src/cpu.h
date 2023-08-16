@@ -13,11 +13,11 @@ namespace gbemu {
 
 // CPUを表すクラス。
 // Example:
-//     std::vector<std::uint8_t> rom = LoadRom();
-//     Cartridge cartridge(std::move(rom));
-//     Memory memory(cartridge);
-//     Cpu cpu(memory);
-//     std::uint8_t cycle = cpu.Step();
+//   std::vector<std::uint8_t> rom = LoadRom();
+//   Cartridge cartridge(std::move(rom));
+//   Memory memory(cartridge);
+//   Cpu cpu(memory);
+//   std::uint8_t cycle = cpu.Step();
 class Cpu {
  private:
   // CPUのレジスタ。
