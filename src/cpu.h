@@ -21,15 +21,18 @@ namespace gbemu {
 class Cpu {
  private:
   // CPUのレジスタ。
-  // Tはレジスタに格納できる値を表す符号なし整数型。
-  template <class T>
+  // Uintはレジスタに格納できる値を表す符号なし整数型。
+  template <class Uint>
   class Register {
    public:
-    T get() { return data_; }
-    void set(T data) { data_ = data; }
+    Register(std::string name) : name_(name) {}
+    Uint get() { return data_; }
+    void set(Uint data) { data_ = data; }
+    std::string name() { return name_; }
 
    private:
-    T data_{};
+    Uint data_{};
+    std::string name_;
   };
 
   using Register8 = Register<std::uint8_t>;
@@ -38,8 +41,8 @@ class Cpu {
   // 8ビットレジスタのペア。
   class Register8Pair {
    public:
-    Register8Pair(Register8& lower, Register8& upper)
-        : lower_(lower), upper_(upper) {}
+    Register8Pair(Register8& lower, Register8& upper, std::string name)
+        : lower_(lower), upper_(upper), name_(name) {}
     std::uint16_t get() {
       return (static_cast<std::uint16_t>(upper_.get()) << 8) | lower_.get();
     }
@@ -47,10 +50,12 @@ class Cpu {
       lower_.set(data & 0xFF);
       upper_.set(data >> 8);
     }
+    std::string name() { return name_; }
 
    private:
     Register8& lower_;
     Register8& upper_;
+    std::string name_;
   };
 
   class Registers {
@@ -69,20 +74,20 @@ class Cpu {
     void reset_c_flag() { flags.set(flags.get() & ~(1 << 4)); }
     Register8& GetRegister8(unsigned i);
 
-    Register8 a{};
-    Register8 b{};
-    Register8 c{};
-    Register8 d{};
-    Register8 e{};
-    Register8 h{};
-    Register8 l{};
-    Register8 flags{};
-    Register8Pair af{a, flags};
-    Register8Pair bc{b, c};
-    Register8Pair de{d, e};
-    Register8Pair hl{h, l};
-    Register16 sp{};
-    Register16 pc{};
+    Register8 a{"a"};
+    Register8 b{"b"};
+    Register8 c{"c"};
+    Register8 d{"d"};
+    Register8 e{"e"};
+    Register8 h{"h"};
+    Register8 l{"l"};
+    Register8 flags{"flags"};
+    Register8Pair af{a, flags, "af"};
+    Register8Pair bc{b, c, "bc"};
+    Register8Pair de{d, e, "de"};
+    Register8Pair hl{h, l, "hl"};
+    Register16 sp{"sp"};
+    Register16 pc{"cp"};
     bool ime{false};  // BootROM実行後の値はどうなっている？
   };
 
@@ -143,6 +148,23 @@ class Cpu {
     void Execute(Cpu& cpu) override;
   };
 
+  // RegTypeはRegister8PairまたはRegister16
+  template <class RegType>
+  class LdR16U16 : public Instruction {
+   public:
+    LdR16U16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+             RegType& reg, std::uint16_t imm)
+        : Instruction(std::move(raw_code), address, 3, 4),
+          reg_(reg),
+          imm_(imm) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+
+   private:
+    RegType& reg_;
+    std::uint16_t imm_;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
@@ -157,6 +179,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchNop();
   std::shared_ptr<Instruction> FetchJpU16();
   std::shared_ptr<Instruction> FetchDi();
+  std::shared_ptr<Instruction> FetchLdR16U16();
 
   Registers registers_;
   Memory& memory_;

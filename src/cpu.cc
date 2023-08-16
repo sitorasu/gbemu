@@ -48,15 +48,29 @@ std::string Cpu::JpU16::GetMnemonicString() {
   return std::string(buf);
 }
 
+void Cpu::JpU16::Execute(Cpu& cpu) { cpu.registers_.pc.set(imm_); }
+
 std::string Cpu::Di::GetMnemonicString() { return "di"; }
 
 void Cpu::Di::Execute(Cpu& cpu) {
-  std::uint8_t pc = cpu.registers_.pc.get();
+  std::uint16_t pc = cpu.registers_.pc.get();
   cpu.registers_.pc.set(pc + length());
   cpu.registers_.ime = false;
 }
 
-void Cpu::JpU16::Execute(Cpu& cpu) { cpu.registers_.pc.set(imm_); }
+template <class RegType>
+std::string Cpu::LdR16U16<RegType>::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld %s, 0x%04X", reg_.name().c_str(), imm_);
+  return std::string(buf);
+}
+
+template <class RegType>
+void Cpu::LdR16U16<RegType>::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  reg_.set(imm_);
+  cpu.registers_.pc.set(pc + length());
+}
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
@@ -84,6 +98,32 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchDi() {
   return std::shared_ptr<Instruction>(new Di(pc));
 }
 
+std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  std::uint16_t imm = memory_.Read16(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode,
+                                     static_cast<std::uint8_t>(imm & 0xFF),
+                                     static_cast<std::uint8_t>(imm >> 8)};
+  unsigned reg_idx = opcode >> 4;
+  switch (reg_idx) {
+    case 0:
+      return std::shared_ptr<Instruction>(
+          new LdR16U16(std::move(raw_code), pc, registers_.bc, imm));
+    case 1:
+      return std::shared_ptr<Instruction>(
+          new LdR16U16(std::move(raw_code), pc, registers_.de, imm));
+    case 2:
+      return std::shared_ptr<Instruction>(
+          new LdR16U16(std::move(raw_code), pc, registers_.hl, imm));
+    case 3:
+      return std::shared_ptr<Instruction>(
+          new LdR16U16(std::move(raw_code), pc, registers_.sp, imm));
+    default:
+      UNREACHABLE("Invalid register index: %d", reg_idx);
+  }
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -99,6 +139,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   }
   if (opcode == 0xF3) {
     return FetchDi();
+  }
+  if (((opcode & 0x0F) == 0x01) && (opcode >> 4 <= 0x03)) {
+    return FetchLdR16U16();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
