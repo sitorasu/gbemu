@@ -182,6 +182,22 @@ class Cpu {
     std::uint16_t imm_;
   };
 
+  // ld r8, u8
+  class LdR8U8 : public Instruction {
+   public:
+    LdR8U8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+           Register8& reg, std::uint8_t imm)
+        : Instruction(std::move(raw_code), address, 2, 2),
+          reg_(reg),
+          imm_(imm) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+
+   private:
+    Register8& reg_;
+    std::uint8_t imm_;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
@@ -198,6 +214,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchDi();
   std::shared_ptr<Instruction> FetchLdR16U16();
   std::shared_ptr<Instruction> FetchLdA16Ra();
+  std::shared_ptr<Instruction> FetchLdR8U8();
 
   Registers registers_;
   Memory& memory_;
