@@ -72,6 +72,19 @@ void Cpu::LdR16U16<RegType>::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(pc + length());
 }
 
+std::string Cpu::LdA16Ra::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld (0x%04X), a", imm_);
+  return std::string(buf);
+}
+
+void Cpu::LdA16Ra::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  std::uint8_t a = cpu.registers_.a.get();
+  cpu.memory_.Write8(imm_, a);
+  cpu.registers_.pc.set(pc + length());
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -124,6 +137,17 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
   }
 }
 
+std::shared_ptr<Cpu::Instruction> Cpu::FetchLdA16Ra() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  std::uint16_t imm = memory_.Read16(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode,
+                                     static_cast<std::uint8_t>(imm & 0xFF),
+                                     static_cast<std::uint8_t>(imm >> 8)};
+  return std::shared_ptr<Instruction>(
+      new LdA16Ra(std::move(raw_code), pc, imm));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -142,6 +166,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   }
   if (((opcode & 0x0F) == 0x01) && (opcode >> 4 <= 0x03)) {
     return FetchLdR16U16();
+  }
+  if (opcode == 0xEA) {
+    return FetchLdA16Ra();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

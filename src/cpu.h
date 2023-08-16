@@ -120,6 +120,7 @@ class Cpu {
     unsigned mcycles_;       // 命令のサイクル数（単位：M-cycle）
   };
 
+  // nop
   class Nop : public Instruction {
    public:
     Nop(std::uint16_t address)
@@ -128,6 +129,7 @@ class Cpu {
     void Execute(Cpu& cpu) override;
   };
 
+  // jp u16
   class JpU16 : public Instruction {
    public:
     JpU16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
@@ -140,6 +142,7 @@ class Cpu {
     std::uint16_t imm_;
   };
 
+  // di
   class Di : public Instruction {
    public:
     Di(std::uint16_t address)
@@ -148,6 +151,7 @@ class Cpu {
     void Execute(Cpu& cpu) override;
   };
 
+  // ld r16, u16
   // RegTypeはRegister8PairまたはRegister16
   template <class RegType>
   class LdR16U16 : public Instruction {
@@ -162,6 +166,19 @@ class Cpu {
 
    private:
     RegType& reg_;
+    std::uint16_t imm_;
+  };
+
+  // ld (u16), a
+  class LdA16Ra : public Instruction {
+   public:
+    LdA16Ra(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+            std::uint16_t imm)
+        : Instruction(std::move(raw_code), address, 3, 4), imm_(imm) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+
+   private:
     std::uint16_t imm_;
   };
 
@@ -180,6 +197,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchJpU16();
   std::shared_ptr<Instruction> FetchDi();
   std::shared_ptr<Instruction> FetchLdR16U16();
+  std::shared_ptr<Instruction> FetchLdA16Ra();
 
   Registers registers_;
   Memory& memory_;
