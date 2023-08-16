@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    ".clang-format": "yaml",
+    "ostream": "cpp",
+    "cstdint": "cpp"
+  }
+}
