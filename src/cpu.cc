@@ -191,6 +191,18 @@ void Cpu::PopR16::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(pc + length());
 }
 
+std::string Cpu::IncR16::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "inc %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+void Cpu::IncR16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  reg_.set(reg_.get() + 1);
+  cpu.registers_.pc.set(pc + length());
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -346,6 +358,19 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchPopR16() {
       new PopR16(std::move(raw_code), pc, *reg));
 }
 
+// [opcode]
+// 0b00xx0011
+//
+// xx: src/dst register
+std::shared_ptr<Cpu::Instruction> Cpu::FetchIncR16() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  unsigned reg_idx = (opcode >> 4) & 0x03;
+  Register<std::uint16_t>& reg = registers_.GetRegister16(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::shared_ptr<Instruction>(new IncR16(std::move(raw_code), pc, reg));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -397,6 +422,10 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   // opcode = 0b11xx0001
   if ((opcode & 0x0F) == 1 && (opcode >> 6) == 3) {
     return FetchPopR16();
+  }
+  // opcode = 0b00xx0011
+  if ((opcode & 0x0F) == 3 && (opcode >> 6) == 0) {
+    return FetchIncR16();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
