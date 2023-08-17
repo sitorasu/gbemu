@@ -31,7 +31,7 @@ Cpu::SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8(unsigned i) {
     case 7:
       return a;
     default:
-      UNREACHABLE("Invalid register index: %d", i);
+      UNREACHABLE("Invalid register index: %u", i);
   }
 }
 
@@ -152,6 +152,18 @@ void Cpu::Ret::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(address);
 }
 
+std::string Cpu::PushR16::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "push %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+void Cpu::PushR16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  cpu.Push(reg_.get());
+  cpu.registers_.pc.set(pc + length());
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -221,7 +233,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
       return std::shared_ptr<Instruction>(
           new LdR16U16(std::move(raw_code), pc, registers_.sp, imm));
     default:
-      UNREACHABLE("Invalid register index: %d", reg_idx);
+      UNREACHABLE("Invalid register index: %u", reg_idx);
   }
 }
 
@@ -255,6 +267,39 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8R8() {
   std::vector<std::uint8_t> raw_code{opcode};
   return std::shared_ptr<Instruction>(
       new LdR8R8(std::move(raw_code), pc, dst, src));
+}
+
+// [opcode]
+// 0b11xx0101
+//     ||
+//     00: bc
+//     01: de
+//     10: hl
+//     11: af
+std::shared_ptr<Cpu::Instruction> Cpu::FetchPushR16() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  unsigned reg_idx = (opcode >> 4) & 0x03;
+  Register<std::uint16_t>* reg;
+  switch (reg_idx) {
+    case 0:
+      reg = &registers_.bc;
+      break;
+    case 1:
+      reg = &registers_.de;
+      break;
+    case 2:
+      reg = &registers_.hl;
+      break;
+    case 3:
+      reg = &registers_.af;
+      break;
+    default:
+      UNREACHABLE("Invalid register index: %u", reg_idx);
+  }
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::shared_ptr<Instruction>(
+      new PushR16(std::move(raw_code), pc, *reg));
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
@@ -300,6 +345,10 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   }
   if (opcode == 0xC9) {
     return FetchNoOperand<Ret>();
+  }
+  // opcode = 0b11xx0101
+  if ((opcode & 0x0F) == 5 && (opcode >> 6) == 3) {
+    return FetchPushR16();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
