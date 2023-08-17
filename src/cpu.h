@@ -56,14 +56,14 @@ class Cpu {
 
    public:
     // 名前を指定しなければ上位と下位のサブレジスタの名前を結合した名前とする。
-    RegisterPair(Register<SubUInt>& lower, Register<SubUInt>& upper)
+    RegisterPair(Register<SubUInt>& upper, Register<SubUInt>& lower)
         : Register<SuperUInt>(upper.name() + lower.name()),
-          lower_(lower),
-          upper_(upper) {}
+          upper_(upper),
+          lower_(lower) {}
     // 名前を明示的に指定することもできる。
-    RegisterPair(Register<SubUInt>& lower, Register<SubUInt>& upper,
+    RegisterPair(Register<SubUInt>& upper, Register<SubUInt>& lower,
                  std::string name)
-        : Register<SuperUInt>(name), lower_(lower), upper_(upper) {}
+        : Register<SuperUInt>(name), upper_(upper), lower_(lower) {}
     SuperUInt get() override {
       return (static_cast<SuperUInt>(upper_.get()) << (sizeof(SubUInt))) |
              lower_.get();
@@ -74,8 +74,8 @@ class Cpu {
     }
 
    private:
-    Register<SubUInt>& lower_{};
     Register<SubUInt>& upper_{};
+    Register<SubUInt>& lower_{};
   };
   // フラグレジスタ。
   class FlagsRegister : public SingleRegister<std::uint8_t> {
