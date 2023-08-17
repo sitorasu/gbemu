@@ -35,6 +35,21 @@ Cpu::SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8(unsigned i) {
   }
 }
 
+Cpu::Register<std::uint16_t>& Cpu::Registers::GetRegister16(unsigned i) {
+  switch (i) {
+    case 0:
+      return bc;
+    case 1:
+      return de;
+    case 2:
+      return hl;
+    case 3:
+      return sp;
+    default:
+      UNREACHABLE("Invalid register index: %u", i);
+  }
+}
+
 std::string Cpu::Nop::GetMnemonicString() { return "nop"; }
 
 void Cpu::Nop::Execute(Cpu& cpu) {
@@ -218,11 +233,8 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchImm16() {
 
 // [opcode]   [imm]
 // 0b00xx0001 <2byte_value>
-//     ||
-//     00: bc
-//     01: de
-//     10: hl
-//     11: sp
+//
+// xx: dst register
 std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -231,22 +243,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
                                      static_cast<std::uint8_t>(imm & 0xFF),
                                      static_cast<std::uint8_t>(imm >> 8)};
   unsigned reg_idx = opcode >> 4;
-  switch (reg_idx) {
-    case 0:
-      return std::shared_ptr<Instruction>(
-          new LdR16U16(std::move(raw_code), pc, registers_.bc, imm));
-    case 1:
-      return std::shared_ptr<Instruction>(
-          new LdR16U16(std::move(raw_code), pc, registers_.de, imm));
-    case 2:
-      return std::shared_ptr<Instruction>(
-          new LdR16U16(std::move(raw_code), pc, registers_.hl, imm));
-    case 3:
-      return std::shared_ptr<Instruction>(
-          new LdR16U16(std::move(raw_code), pc, registers_.sp, imm));
-    default:
-      UNREACHABLE("Invalid register index: %u", reg_idx);
-  }
+  Register<std::uint16_t>& reg = registers_.GetRegister16(reg_idx);
+  return std::shared_ptr<Instruction>(
+      new LdR16U16(std::move(raw_code), pc, reg, imm));
 }
 
 // [opcode]
@@ -287,7 +286,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8R8() {
 //     00: bc
 //     01: de
 //     10: hl
-//     11: af
+//     11: af <= ここがspではないのでGetRegister16()が使えない
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPushR16() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -320,7 +319,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchPushR16() {
 //     00: bc
 //     01: de
 //     10: hl
-//     11: af
+//     11: af <= ここがspではないのでGetRegister16()が使えない
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPopR16() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);

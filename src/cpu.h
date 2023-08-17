@@ -100,6 +100,7 @@ class Cpu {
   class Registers {
    public:
     SingleRegister<std::uint8_t>& GetRegister8(unsigned i);
+    Register<std::uint16_t>& GetRegister16(unsigned i);
 
     SingleRegister<std::uint8_t> a{"a"};
     SingleRegister<std::uint8_t> b{"b"};
