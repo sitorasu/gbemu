@@ -149,7 +149,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchNoOperand() {
 }
 
 // [opcode]      [imm]
-// <1byte_value> <1byte_value>
+// <1byte_value> <2byte_value>
 template <class InstType>
 std::shared_ptr<Cpu::Instruction> Cpu::FetchImm16() {
   std::uint16_t pc = registers_.pc.get();
@@ -163,7 +163,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchImm16() {
 }
 
 // [opcode]   [imm]
-// 0b00xx0001 <1byte_value>
+// 0b00xx0001 <2byte_value>
 //     ||
 //     00: bc
 //     01: de
