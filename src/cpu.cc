@@ -128,24 +128,22 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   UNREACHABLE("Unknown opcode: CB %02X", opcode);
 }
 
-std::shared_ptr<Cpu::Instruction> Cpu::FetchNop() {
+template <class InstType>
+std::shared_ptr<Cpu::Instruction> Cpu::FetchNoOperand() {
   std::uint16_t pc = registers_.pc.get();
-  return std::shared_ptr<Instruction>(new Nop(pc));
+  return std::shared_ptr<Instruction>(new InstType(pc));
 }
 
-std::shared_ptr<Cpu::Instruction> Cpu::FetchJpU16() {
+template <class InstType>
+std::shared_ptr<Cpu::Instruction> Cpu::FetchImm16() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
   std::uint16_t imm = memory_.Read16(pc + 1);
   std::vector<std::uint8_t> raw_code{opcode,
                                      static_cast<std::uint8_t>(imm & 0xFF),
                                      static_cast<std::uint8_t>(imm >> 8)};
-  return std::shared_ptr<Instruction>(new JpU16(std::move(raw_code), pc, imm));
-}
-
-std::shared_ptr<Cpu::Instruction> Cpu::FetchDi() {
-  std::uint16_t pc = registers_.pc.get();
-  return std::shared_ptr<Instruction>(new Di(pc));
+  return std::shared_ptr<Instruction>(
+      new InstType(std::move(raw_code), pc, imm));
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
@@ -174,17 +172,6 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR16U16() {
   }
 }
 
-std::shared_ptr<Cpu::Instruction> Cpu::FetchLdA16Ra() {
-  std::uint16_t pc = registers_.pc.get();
-  std::uint8_t opcode = memory_.Read8(pc);
-  std::uint16_t imm = memory_.Read16(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode,
-                                     static_cast<std::uint8_t>(imm & 0xFF),
-                                     static_cast<std::uint8_t>(imm >> 8)};
-  return std::shared_ptr<Instruction>(
-      new LdA16Ra(std::move(raw_code), pc, imm));
-}
-
 std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8U8() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -205,38 +192,27 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdhA8Ra() {
       new LdhA8Ra(std::move(raw_code), pc, imm));
 }
 
-std::shared_ptr<Cpu::Instruction> Cpu::FetchCallU16() {
-  std::uint16_t pc = registers_.pc.get();
-  std::uint8_t opcode = memory_.Read8(pc);
-  std::uint16_t imm = memory_.Read16(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode,
-                                     static_cast<std::uint8_t>(imm & 0xFF),
-                                     static_cast<std::uint8_t>(imm >> 8)};
-  return std::shared_ptr<Instruction>(
-      new CallU16(std::move(raw_code), pc, imm));
-}
-
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
   if (opcode == 0xCB) {
-    // プレフィックスありの命令の実行
+    // プレフィックスありの命令をフェッチ
     return FetchPrefixedInstruction();
   }
   if (opcode == 0x00) {
-    return FetchNop();
+    return FetchNoOperand<Nop>();
   }
   if (opcode == 0xC3) {
-    return FetchJpU16();
+    return FetchImm16<JpU16>();
   }
   if (opcode == 0xF3) {
-    return FetchDi();
+    return FetchNoOperand<Di>();
   }
   if (((opcode & 0x0F) == 0x01) && (opcode >> 4 <= 0x03)) {
     return FetchLdR16U16();
   }
   if (opcode == 0xEA) {
-    return FetchLdA16Ra();
+    return FetchImm16<LdA16Ra>();
   }
   if (((opcode & 0x07) == 0x06) && (opcode >> 6 == 0) &&
       (opcode >> 3 != 0x06)) {
@@ -246,7 +222,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchLdhA8Ra();
   }
   if (opcode == 0xCD) {
-    return FetchCallU16();
+    return FetchImm16<CallU16>();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

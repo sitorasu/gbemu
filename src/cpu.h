@@ -260,14 +260,13 @@ class Cpu {
   void Execute(std::shared_ptr<Instruction> inst) { inst->Execute(*this); }
   std::shared_ptr<Instruction> FetchInstruction();
   std::shared_ptr<Instruction> FetchPrefixedInstruction();
-  std::shared_ptr<Instruction> FetchNop();
-  std::shared_ptr<Instruction> FetchJpU16();
-  std::shared_ptr<Instruction> FetchDi();
+  template <class InstType>
+  std::shared_ptr<Instruction> FetchNoOperand();
+  template <class InstType>
+  std::shared_ptr<Instruction> FetchImm16();
   std::shared_ptr<Instruction> FetchLdR16U16();
-  std::shared_ptr<Instruction> FetchLdA16Ra();
   std::shared_ptr<Instruction> FetchLdR8U8();
   std::shared_ptr<Instruction> FetchLdhA8Ra();
-  std::shared_ptr<Instruction> FetchCallU16();
 
   Registers registers_;
   Memory& memory_;
