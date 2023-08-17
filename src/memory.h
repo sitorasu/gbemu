@@ -21,7 +21,9 @@ namespace gbemu {
 class Memory {
  public:
   Memory(Cartridge& cartridge)
-      : cartridge_(cartridge), internal_ram_(kInternalRamSize) {}
+      : cartridge_(cartridge),
+        internal_ram_(kInternalRamSize),
+        h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
   std::uint8_t Read8(std::uint16_t address);
   std::uint16_t Read16(std::uint16_t address);
@@ -31,8 +33,10 @@ class Memory {
  private:
   // ROM、内蔵RAM、PPUなどへの参照を持っていると良さそう
   constexpr static auto kInternalRamSize = 8 * 1024;
+  constexpr static auto kHRamSize = 127;
   Cartridge& cartridge_;
   std::vector<std::uint8_t> internal_ram_;
+  std::vector<std::uint8_t> h_ram_;
 };
 
 }  // namespace gbemu

@@ -33,7 +33,7 @@ uint8_t Memory::Read8(std::uint16_t address) {
     UNREACHABLE("Read from I/O Registers is not implemented.");
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
-    UNREACHABLE("Read from HRAM is not implemented.");
+    return h_ram_.at(address & 0x007F);
   } else {
     // レジスタIEからの読み出し
     ASSERT(address == 0xFFFF, "Read from unknown address: %d",
@@ -75,7 +75,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     WARN("Write to I/O register is not implemented.");
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
-    UNREACHABLE("Write to HRAM is not implemented.");
+    h_ram_.at(address & 0x007F) = value;
   } else {
     // レジスタIEへの書き込み
     ASSERT(address == 0xFFFF, "Write to unknown address: %d",
