@@ -108,7 +108,7 @@ class Cpu {
     SingleRegister<std::uint8_t> e{"e"};
     SingleRegister<std::uint8_t> h{"h"};
     SingleRegister<std::uint8_t> l{"l"};
-    SingleRegister<std::uint8_t> flags{"flags"};
+    FlagsRegister flags{"flags"};
     Register8Pair af{a, flags, "af"};
     Register8Pair bc{b, c};
     Register8Pair de{d, e};
