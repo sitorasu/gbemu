@@ -134,6 +134,19 @@ void Cpu::LdR8R8::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(pc + length());
 }
 
+std::string Cpu::JrS8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "jr 0x%02X", imm_);
+  return std::string(buf);
+}
+
+void Cpu::JrS8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  std::int8_t simm = CastToSigned<std::uint8_t, std::int8_t>(imm_);
+  std::uint16_t uimm = simm;  // 符号拡張
+  cpu.registers_.pc.set(pc + length() + uimm);
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -236,6 +249,14 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8R8() {
       new LdR8R8(std::move(raw_code), pc, dst, src));
 }
 
+std::shared_ptr<Cpu::Instruction> Cpu::FetchJrS8() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  std::uint8_t imm = memory_.Read8(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode, imm};
+  return std::shared_ptr<Instruction>(new JrS8(std::move(raw_code), pc, imm));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -273,6 +294,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   if (((opcode >> 6) & 0x03) == 1 && ((opcode >> 3) & 0x07) != 6 &&
       (opcode & 0x07) != 6) {
     return FetchLdR8R8();
+  }
+  if (opcode == 0x18) {
+    return FetchJrS8();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
