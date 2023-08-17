@@ -244,7 +244,6 @@ std::string Join(const std::vector<std::uint8_t>& v) {
 
 unsigned Cpu::Step() {
   std::shared_ptr<Instruction> inst = FetchInstruction();
-  Execute(inst);
 
   // デバッグモードなら命令の情報を表示
   // 表示例
@@ -260,6 +259,8 @@ unsigned Cpu::Step() {
                  mnemonic.c_str());
     std::printf("%s\n", buf);
   }
+
+  Execute(inst);
 
   return inst->mcycles();
 }
