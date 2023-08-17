@@ -164,6 +164,18 @@ void Cpu::PushR16::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(pc + length());
 }
 
+std::string Cpu::PopR16::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "pop %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+void Cpu::PopR16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  reg_.set(cpu.Pop());
+  cpu.registers_.pc.set(pc + length());
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -302,6 +314,39 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchPushR16() {
       new PushR16(std::move(raw_code), pc, *reg));
 }
 
+// [opcode]
+// 0b11xx0001
+//     ||
+//     00: bc
+//     01: de
+//     10: hl
+//     11: af
+std::shared_ptr<Cpu::Instruction> Cpu::FetchPopR16() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  unsigned reg_idx = (opcode >> 4) & 0x03;
+  Register<std::uint16_t>* reg;
+  switch (reg_idx) {
+    case 0:
+      reg = &registers_.bc;
+      break;
+    case 1:
+      reg = &registers_.de;
+      break;
+    case 2:
+      reg = &registers_.hl;
+      break;
+    case 3:
+      reg = &registers_.af;
+      break;
+    default:
+      UNREACHABLE("Invalid register index: %u", reg_idx);
+  }
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::shared_ptr<Instruction>(
+      new PopR16(std::move(raw_code), pc, *reg));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -349,6 +394,10 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   // opcode = 0b11xx0101
   if ((opcode & 0x0F) == 5 && (opcode >> 6) == 3) {
     return FetchPushR16();
+  }
+  // opcode = 0b11xx0001
+  if ((opcode & 0x0F) == 1 && (opcode >> 6) == 3) {
+    return FetchPopR16();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

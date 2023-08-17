@@ -299,6 +299,19 @@ class Cpu {
     Register<std::uint16_t>& reg_;
   };
 
+  // pop
+  class PopR16 : public Instruction {
+   public:
+    PopR16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+           Register<std::uint16_t>& reg)
+        : Instruction(std::move(raw_code), address, 1, 3), reg_(reg) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+
+   public:
+    Register<std::uint16_t>& reg_;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
@@ -320,6 +333,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchLdR8U8();
   std::shared_ptr<Instruction> FetchLdR8R8();
   std::shared_ptr<Instruction> FetchPushR16();
+  std::shared_ptr<Instruction> FetchPopR16();
 
   void Push(std::uint16_t value);
   std::uint16_t Pop();
