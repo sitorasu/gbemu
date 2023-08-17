@@ -162,6 +162,18 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchNoOperand() {
 }
 
 // [opcode]      [imm]
+// <1byte_value> <byte_value>
+template <class InstType>
+std::shared_ptr<Cpu::Instruction> Cpu::FetchImm8() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  std::uint8_t imm = memory_.Read8(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode, imm};
+  return std::shared_ptr<Instruction>(
+      new InstType(std::move(raw_code), pc, imm));
+}
+
+// [opcode]      [imm]
 // <1byte_value> <2byte_value>
 template <class InstType>
 std::shared_ptr<Cpu::Instruction> Cpu::FetchImm16() {
@@ -223,15 +235,6 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8U8() {
       new LdR8U8(std::move(raw_code), pc, reg, imm));
 }
 
-std::shared_ptr<Cpu::Instruction> Cpu::FetchLdhA8Ra() {
-  std::uint16_t pc = registers_.pc.get();
-  std::uint8_t opcode = memory_.Read8(pc);
-  std::uint8_t imm = memory_.Read8(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode, imm};
-  return std::shared_ptr<Instruction>(
-      new LdhA8Ra(std::move(raw_code), pc, imm));
-}
-
 // [opcode]
 // 0b01xxxyyy
 //
@@ -247,14 +250,6 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8R8() {
   std::vector<std::uint8_t> raw_code{opcode};
   return std::shared_ptr<Instruction>(
       new LdR8R8(std::move(raw_code), pc, dst, src));
-}
-
-std::shared_ptr<Cpu::Instruction> Cpu::FetchJrS8() {
-  std::uint16_t pc = registers_.pc.get();
-  std::uint8_t opcode = memory_.Read8(pc);
-  std::uint8_t imm = memory_.Read8(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode, imm};
-  return std::shared_ptr<Instruction>(new JrS8(std::move(raw_code), pc, imm));
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
@@ -285,7 +280,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchLdR8U8();
   }
   if (opcode == 0xE0) {
-    return FetchLdhA8Ra();
+    return FetchImm8<LdhA8Ra>();
   }
   if (opcode == 0xCD) {
     return FetchImm16<CallU16>();
@@ -296,7 +291,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchLdR8R8();
   }
   if (opcode == 0x18) {
-    return FetchJrS8();
+    return FetchImm8<JrS8>();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

@@ -291,12 +291,12 @@ class Cpu {
   template <class InstType>
   std::shared_ptr<Instruction> FetchNoOperand();
   template <class InstType>
+  std::shared_ptr<Instruction> FetchImm8();
+  template <class InstType>
   std::shared_ptr<Instruction> FetchImm16();
   std::shared_ptr<Instruction> FetchLdR16U16();
   std::shared_ptr<Instruction> FetchLdR8U8();
-  std::shared_ptr<Instruction> FetchLdhA8Ra();
   std::shared_ptr<Instruction> FetchLdR8R8();
-  std::shared_ptr<Instruction> FetchJrS8();
 
   Registers registers_;
   Memory& memory_;
