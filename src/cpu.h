@@ -307,6 +307,9 @@ class Cpu {
   std::shared_ptr<Instruction> FetchLdR8U8();
   std::shared_ptr<Instruction> FetchLdR8R8();
 
+  void Push(std::uint16_t value);
+  std::uint16_t Pop();
+
   Registers registers_;
   Memory& memory_;
 };

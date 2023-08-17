@@ -116,9 +116,7 @@ std::string Cpu::CallU16::GetMnemonicString() {
 
 void Cpu::CallU16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers_.pc.get();
-  std::uint16_t sp = cpu.registers_.sp.get();
-  cpu.memory_.Write16(sp - 2, pc + length());
-  cpu.registers_.sp.set(sp - 2);
+  cpu.Push(pc + length());
   cpu.registers_.pc.set(imm_);
 }
 
@@ -150,9 +148,7 @@ void Cpu::JrS8::Execute(Cpu& cpu) {
 std::string Cpu::Ret::GetMnemonicString() { return "ret"; }
 
 void Cpu::Ret::Execute(Cpu& cpu) {
-  std::uint16_t sp = cpu.registers_.sp.get();
-  std::uint16_t address = cpu.memory_.Read16(sp);
-  cpu.registers_.sp.set(sp + 2);
+  std::uint16_t address = cpu.Pop();
   cpu.registers_.pc.set(address);
 }
 
@@ -346,6 +342,19 @@ unsigned Cpu::Step() {
   Execute(inst);
 
   return inst->mcycles();
+}
+
+void Cpu::Push(std::uint16_t value) {
+  std::uint16_t sp = registers_.sp.get();
+  memory_.Write16(sp - 2, value);
+  registers_.sp.set(sp - 2);
+}
+
+std::uint16_t Cpu::Pop() {
+  std::uint16_t sp = registers_.sp.get();
+  std::uint16_t value = memory_.Read16(sp);
+  registers_.sp.set(sp + 2);
+  return value;
 }
 
 }  // namespace gbemu
