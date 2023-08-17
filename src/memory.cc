@@ -86,7 +86,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
 
 void Memory::Write16(std::uint16_t address, std::uint16_t value) {
   Write8(address, value & 0xFF);
-  Write8(address, value >> 8);
+  Write8(address + 1, value >> 8);
 }
 
 }  // namespace gbemu

@@ -117,7 +117,7 @@ std::string Cpu::CallU16::GetMnemonicString() {
 void Cpu::CallU16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers_.pc.get();
   std::uint16_t sp = cpu.registers_.sp.get();
-  cpu.memory_.Write16(sp - 1, pc);
+  cpu.memory_.Write16(sp - 2, pc + length());
   cpu.registers_.sp.set(sp - 2);
   cpu.registers_.pc.set(imm_);
 }
