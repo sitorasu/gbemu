@@ -118,7 +118,7 @@ void Cpu::CallU16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers_.pc.get();
   std::uint16_t sp = cpu.registers_.sp.get();
   cpu.memory_.Write16(sp - 1, pc);
-  cpu.registers_.sp.set(sp + 2);
+  cpu.registers_.sp.set(sp - 2);
   cpu.registers_.pc.set(imm_);
 }
 
@@ -145,6 +145,15 @@ void Cpu::JrS8::Execute(Cpu& cpu) {
   std::int8_t simm = CastToSigned<std::uint8_t, std::int8_t>(imm_);
   std::uint16_t uimm = simm;  // 符号拡張
   cpu.registers_.pc.set(pc + length() + uimm);
+}
+
+std::string Cpu::Ret::GetMnemonicString() { return "ret"; }
+
+void Cpu::Ret::Execute(Cpu& cpu) {
+  std::uint16_t sp = cpu.registers_.sp.get();
+  std::uint16_t address = cpu.memory_.Read16(sp);
+  cpu.registers_.sp.set(sp + 2);
+  cpu.registers_.pc.set(address);
 }
 
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
@@ -292,6 +301,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   }
   if (opcode == 0x18) {
     return FetchImm8<JrS8>();
+  }
+  if (opcode == 0xC9) {
+    return FetchNoOperand<Ret>();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

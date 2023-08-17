@@ -277,6 +277,15 @@ class Cpu {
     std::uint8_t imm_;
   };
 
+  // ret
+  class Ret : public Instruction {
+   public:
+    Ret(std::uint16_t address)
+        : Instruction(std::vector<std::uint8_t>{0xC9}, address, 1, 4) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
