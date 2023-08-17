@@ -20,74 +20,101 @@ namespace gbemu {
 //   std::uint8_t cycle = cpu.Step();
 class Cpu {
  private:
-  // CPUのレジスタ。
-  // Uintはレジスタに格納できる値を表す符号なし整数型。
-  template <class Uint>
+  // レジスタに対する操作を規定するインターフェース。
+  // UIntTypeはレジスタのビット幅を表す符号無し整数型。
+  template <class UIntType>
   class Register {
    public:
     Register(std::string name) : name_(name) {}
-    Uint get() { return data_; }
-    void set(Uint data) { data_ = data; }
+    virtual UIntType get() = 0;
+    virtual void set(UIntType data) = 0;
     std::string name() { return name_; }
 
    private:
-    Uint data_{};
     std::string name_;
   };
-
-  using Register8 = Register<std::uint8_t>;
-  using Register16 = Register<std::uint16_t>;
-
-  // 8ビットレジスタのペア。
-  class Register8Pair {
+  // 単一のレジスタの実装。
+  // UIntTypeはレジスタのビット幅を表す符号無し整数型。
+  template <class UIntType>
+  class SingleRegister : public Register<UIntType> {
    public:
-    Register8Pair(Register8& lower, Register8& upper, std::string name)
-        : lower_(lower), upper_(upper), name_(name) {}
-    std::uint16_t get() {
-      return (static_cast<std::uint16_t>(upper_.get()) << 8) | lower_.get();
+    SingleRegister(std::string name) : Register<UIntType>(name) {}
+    UIntType get() override { return data_; }
+    void set(UIntType data) override { data_ = data; }
+
+   protected:
+    UIntType data_{};
+  };
+  // レジスタのペアの実装
+  // SubUIntはペアを構成するサブレジスタのビット幅を表す符号無し整数型。
+  // SuperUIntは全体のビット幅を表す符号無し整数型。
+  template <class SubUInt, class SuperUInt>
+  class RegisterPair : public Register<SuperUInt> {
+    static_assert(sizeof(SuperUInt) == sizeof(SubUInt) * 2,
+                  "The size of the pair register must be twice the size of the "
+                  "sub register.");
+
+   public:
+    // 名前を指定しなければ上位と下位のサブレジスタの名前を結合した名前とする。
+    RegisterPair(Register<SubUInt>& lower, Register<SubUInt>& upper)
+        : Register<SuperUInt>(upper.name() + lower.name()),
+          lower_(lower),
+          upper_(upper) {}
+    // 名前を明示的に指定することもできる。
+    RegisterPair(Register<SubUInt>& lower, Register<SubUInt>& upper,
+                 std::string name)
+        : Register<SuperUInt>(name), lower_(lower), upper_(upper) {}
+    SuperUInt get() override {
+      return (static_cast<SuperUInt>(upper_.get()) << (sizeof(SubUInt))) |
+             lower_.get();
     }
-    void set(std::uint16_t data) {
-      lower_.set(data & 0xFF);
-      upper_.set(data >> 8);
+    void set(SuperUInt data) override {
+      lower_.set(static_cast<SubUInt>(data));
+      upper_.set(data >> sizeof(SubUInt));
     }
-    std::string name() { return name_; }
 
    private:
-    Register8& lower_;
-    Register8& upper_;
-    std::string name_;
+    Register<SubUInt>& lower_{};
+    Register<SubUInt>& upper_{};
   };
+  // フラグレジスタ。
+  class FlagsRegister : public SingleRegister<std::uint8_t> {
+   public:
+    FlagsRegister(std::string name) : SingleRegister(name) {}
+    bool z_flag() { return data_ & (1 << 7); }
+    bool n_flag() { return data_ & (1 << 6); }
+    bool h_flag() { return data_ & (1 << 5); }
+    bool c_flag() { return data_ & (1 << 4); }
+    void set_z_flag() { data_ |= (1 << 7); }
+    void set_n_flag() { data_ |= (1 << 6); }
+    void set_h_flag() { data_ |= (1 << 5); }
+    void set_c_flag() { data_ |= (1 << 4); }
+    void reset_z_flag() { data_ &= ~(1 << 7); }
+    void reset_n_flag() { data_ &= ~(1 << 6); }
+    void reset_h_flag() { data_ &= ~(1 << 5); }
+    void reset_c_flag() { data_ &= ~(1 << 4); }
+  };
+
+  using Register8Pair = RegisterPair<std::uint8_t, std::uint16_t>;
 
   class Registers {
    public:
-    bool z_flag() { return flags.get() & (1 << 7); }
-    bool n_flag() { return flags.get() & (1 << 6); }
-    bool h_flag() { return flags.get() & (1 << 5); }
-    bool c_flag() { return flags.get() & (1 << 4); }
-    void set_z_flag() { flags.set(flags.get() | (1 << 7)); }
-    void set_n_flag() { flags.set(flags.get() | (1 << 6)); }
-    void set_h_flag() { flags.set(flags.get() | (1 << 5)); }
-    void set_c_flag() { flags.set(flags.get() | (1 << 4)); }
-    void reset_z_flag() { flags.set(flags.get() & ~(1 << 7)); }
-    void reset_n_flag() { flags.set(flags.get() & ~(1 << 6)); }
-    void reset_h_flag() { flags.set(flags.get() & ~(1 << 5)); }
-    void reset_c_flag() { flags.set(flags.get() & ~(1 << 4)); }
-    Register8& GetRegister8(unsigned i);
+    SingleRegister<std::uint8_t>& GetRegister8(unsigned i);
 
-    Register8 a{"a"};
-    Register8 b{"b"};
-    Register8 c{"c"};
-    Register8 d{"d"};
-    Register8 e{"e"};
-    Register8 h{"h"};
-    Register8 l{"l"};
-    Register8 flags{"flags"};
+    SingleRegister<std::uint8_t> a{"a"};
+    SingleRegister<std::uint8_t> b{"b"};
+    SingleRegister<std::uint8_t> c{"c"};
+    SingleRegister<std::uint8_t> d{"d"};
+    SingleRegister<std::uint8_t> e{"e"};
+    SingleRegister<std::uint8_t> h{"h"};
+    SingleRegister<std::uint8_t> l{"l"};
+    SingleRegister<std::uint8_t> flags{"flags"};
     Register8Pair af{a, flags, "af"};
-    Register8Pair bc{b, c, "bc"};
-    Register8Pair de{d, e, "de"};
-    Register8Pair hl{h, l, "hl"};
-    Register16 sp{"sp"};
-    Register16 pc{"cp"};
+    Register8Pair bc{b, c};
+    Register8Pair de{d, e};
+    Register8Pair hl{h, l};
+    SingleRegister<std::uint16_t> sp{"sp"};
+    SingleRegister<std::uint16_t> pc{"cp"};
     bool ime{false};  // BootROM実行後の値はどうなっている？
   };
 
@@ -152,12 +179,10 @@ class Cpu {
   };
 
   // ld r16, u16
-  // RegTypeはRegister8PairまたはRegister16
-  template <class RegType>
   class LdR16U16 : public Instruction {
    public:
     LdR16U16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
-             RegType& reg, std::uint16_t imm)
+             Register<std::uint16_t>& reg, std::uint16_t imm)
         : Instruction(std::move(raw_code), address, 3, 4),
           reg_(reg),
           imm_(imm) {}
@@ -165,7 +190,7 @@ class Cpu {
     void Execute(Cpu& cpu) override;
 
    private:
-    RegType& reg_;
+    Register<std::uint16_t>& reg_;
     std::uint16_t imm_;
   };
 
@@ -186,7 +211,7 @@ class Cpu {
   class LdR8U8 : public Instruction {
    public:
     LdR8U8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
-           Register8& reg, std::uint8_t imm)
+           Register<std::uint8_t>& reg, std::uint8_t imm)
         : Instruction(std::move(raw_code), address, 2, 2),
           reg_(reg),
           imm_(imm) {}
@@ -194,7 +219,7 @@ class Cpu {
     void Execute(Cpu& cpu) override;
 
    private:
-    Register8& reg_;
+    Register<std::uint8_t>& reg_;
     std::uint8_t imm_;
   };
 

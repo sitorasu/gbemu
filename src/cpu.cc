@@ -12,7 +12,7 @@
 
 namespace gbemu {
 
-Cpu::Register8& Cpu::Registers::GetRegister8(unsigned i) {
+Cpu::SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8(unsigned i) {
   switch (i) {
     case 0:
       return b;
@@ -58,15 +58,13 @@ void Cpu::Di::Execute(Cpu& cpu) {
   cpu.registers_.ime = false;
 }
 
-template <class RegType>
-std::string Cpu::LdR16U16<RegType>::GetMnemonicString() {
+std::string Cpu::LdR16U16::GetMnemonicString() {
   char buf[16];
   std::sprintf(buf, "ld %s, 0x%04X", reg_.name().c_str(), imm_);
   return std::string(buf);
 }
 
-template <class RegType>
-void Cpu::LdR16U16<RegType>::Execute(Cpu& cpu) {
+void Cpu::LdR16U16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers_.pc.get();
   reg_.set(imm_);
   cpu.registers_.pc.set(pc + length());
@@ -178,7 +176,7 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchLdR8U8() {
   std::uint8_t opcode = memory_.Read8(pc);
   std::uint8_t imm = memory_.Read8(pc + 1);
   unsigned reg_idx = opcode >> 3;
-  Register8& reg = registers_.GetRegister8(reg_idx);
+  Register<std::uint8_t>& reg = registers_.GetRegister8(reg_idx);
   std::vector<std::uint8_t> raw_code{opcode, imm};
   return std::shared_ptr<Instruction>(
       new LdR8U8(std::move(raw_code), pc, reg, imm));
