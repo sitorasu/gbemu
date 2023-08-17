@@ -65,12 +65,12 @@ class Cpu {
                  std::string name)
         : Register<SuperUInt>(name), upper_(upper), lower_(lower) {}
     SuperUInt get() override {
-      return (static_cast<SuperUInt>(upper_.get()) << (sizeof(SubUInt))) |
+      return (static_cast<SuperUInt>(upper_.get()) << (sizeof(SubUInt) * 8)) |
              lower_.get();
     }
     void set(SuperUInt data) override {
       lower_.set(static_cast<SubUInt>(data));
-      upper_.set(data >> sizeof(SubUInt));
+      upper_.set(data >> (sizeof(SubUInt) * 8));
     }
 
    private:
@@ -101,6 +101,7 @@ class Cpu {
    public:
     SingleRegister<std::uint8_t>& GetRegister8(unsigned i);
     Register<std::uint16_t>& GetRegister16(unsigned i);
+    void Print();
 
     SingleRegister<std::uint8_t> a{"a"};
     SingleRegister<std::uint8_t> b{"b"};
@@ -115,7 +116,7 @@ class Cpu {
     Register8Pair de{d, e};
     Register8Pair hl{h, l};
     SingleRegister<std::uint16_t> sp{"sp"};
-    SingleRegister<std::uint16_t> pc{"cp"};
+    SingleRegister<std::uint16_t> pc{"pc"};
     bool ime{false};  // BootROM実行後の値はどうなっている？
   };
 
@@ -266,6 +267,7 @@ class Cpu {
     SingleRegister<std::uint8_t>& src_;
   };
 
+  // jr s8
   class JrS8 : public Instruction {
    public:
     JrS8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
@@ -324,6 +326,15 @@ class Cpu {
 
    public:
     Register<std::uint16_t>& reg_;
+  };
+
+  // ld a, (hl+)
+  class LdRaAhli : public Instruction {
+   public:
+    LdRaAhli(std::uint16_t address)
+        : Instruction(std::vector<std::uint8_t>{0x2A}, address, 1, 2) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
   };
 
  public:

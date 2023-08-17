@@ -50,6 +50,18 @@ Cpu::Register<std::uint16_t>& Cpu::Registers::GetRegister16(unsigned i) {
   }
 }
 
+void Cpu::Registers::Print() {
+  auto reg_print = [](auto reg) {
+    std::printf("%s:\t%04X\n", reg.name().c_str(), reg.get());
+  };
+  reg_print(af);
+  reg_print(bc);
+  reg_print(de);
+  reg_print(hl);
+  reg_print(sp);
+  reg_print(pc);
+}
+
 std::string Cpu::Nop::GetMnemonicString() { return "nop"; }
 
 void Cpu::Nop::Execute(Cpu& cpu) {
@@ -200,6 +212,17 @@ std::string Cpu::IncR16::GetMnemonicString() {
 void Cpu::IncR16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers_.pc.get();
   reg_.set(reg_.get() + 1);
+  cpu.registers_.pc.set(pc + length());
+}
+
+std::string Cpu::LdRaAhli::GetMnemonicString() { return "ld a, (hl+)"; }
+
+void Cpu::LdRaAhli::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  std::uint16_t hl = cpu.registers_.hl.get();
+  std::uint8_t value = cpu.memory_.Read8(hl);
+  cpu.registers_.a.set(value);
+  cpu.registers_.hl.set(hl + 1);
   cpu.registers_.pc.set(pc + length());
 }
 
@@ -427,6 +450,9 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   if ((opcode & 0x0F) == 3 && (opcode >> 6) == 0) {
     return FetchIncR16();
   }
+  if (opcode == 0x2A) {
+    return FetchNoOperand<LdRaAhli>();
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -452,10 +478,7 @@ unsigned Cpu::Step() {
 
   // デバッグモードなら命令の情報を表示
   // 表示例
-  // $0100 00         nop
-  // $0101 C3 37 06   jp 0x0637
   // $0637 C3 30 04   jp 0x0430
-  // ...
   if (options.debug()) {
     char buf[64];
     std::string raw_code = Join(inst->raw_code());
