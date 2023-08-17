@@ -236,6 +236,19 @@ class Cpu {
     std::uint8_t imm_;
   };
 
+  // call u16
+  class CallU16 : public Instruction {
+   public:
+    CallU16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+            std::uint16_t imm)
+        : Instruction(std::move(raw_code), address, 3, 6), imm_(imm) {}
+    std::string GetMnemonicString() override;
+    void Execute(Cpu& cpu) override;
+
+   private:
+    std::uint16_t imm_;
+  };
+
  public:
   Cpu(Memory& memory) : registers_(), memory_(memory) {
     registers_.pc.set(0x100);
@@ -254,6 +267,7 @@ class Cpu {
   std::shared_ptr<Instruction> FetchLdA16Ra();
   std::shared_ptr<Instruction> FetchLdR8U8();
   std::shared_ptr<Instruction> FetchLdhA8Ra();
+  std::shared_ptr<Instruction> FetchCallU16();
 
   Registers registers_;
   Memory& memory_;

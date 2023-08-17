@@ -26,6 +26,7 @@ class Memory {
   std::uint8_t Read8(std::uint16_t address);
   std::uint16_t Read16(std::uint16_t address);
   void Write8(std::uint16_t address, std::uint8_t value);
+  void Write16(std::uint16_t address, std::uint16_t value);
 
  private:
   // ROM、内蔵RAM、PPUなどへの参照を持っていると良さそう
