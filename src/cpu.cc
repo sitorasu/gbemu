@@ -226,6 +226,27 @@ void Cpu::LdRaAhli::Execute(Cpu& cpu) {
   cpu.registers_.pc.set(pc + length());
 }
 
+std::string Cpu::OrRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "or a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+void Cpu::OrRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers_.pc.get();
+  std::uint8_t result = cpu.registers_.a.get() | reg_.get();
+  cpu.registers_.a.set(result);
+  if (result == 0) {
+    cpu.registers_.flags.set_z_flag();
+  } else {
+    cpu.registers_.flags.reset_z_flag();
+  }
+  cpu.registers_.flags.reset_n_flag();
+  cpu.registers_.flags.reset_h_flag();
+  cpu.registers_.flags.reset_c_flag();
+  cpu.registers_.pc.set(pc + length());
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchPrefixedInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc + 1);
@@ -394,6 +415,19 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchIncR16() {
   return std::shared_ptr<Instruction>(new IncR16(std::move(raw_code), pc, reg));
 }
 
+// [opcode]
+// 0b10110xxx
+//
+// xxx: register
+std::shared_ptr<Cpu::Instruction> Cpu::FetchOrRaR8() {
+  std::uint16_t pc = registers_.pc.get();
+  std::uint8_t opcode = memory_.Read8(pc);
+  unsigned reg_idx = opcode & 0x07;
+  SingleRegister<std::uint8_t>& reg = registers_.GetRegister8(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::shared_ptr<Instruction>(new OrRaR8(std::move(raw_code), pc, reg));
+}
+
 std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
   std::uint16_t pc = registers_.pc.get();
   std::uint8_t opcode = memory_.Read8(pc);
@@ -411,14 +445,15 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchNoOperand<Di>();
   }
   // opcode = 0b00xx0001
-  if (((opcode & 0x0F) == 1) && (opcode >> 4 <= 3)) {
+  if ((opcode & 0x0F) == 0x01 && (opcode >> 4) <= 0x03) {
     return FetchLdR16U16();
   }
   if (opcode == 0xEA) {
     return FetchImm16<LdA16Ra>();
   }
   // opcode = 0b00xxx110 AND xxx != 0b110
-  if (((opcode & 0x07) == 6) && (opcode >> 6 == 0) && (opcode >> 3 != 6)) {
+  if ((opcode & 0x07) == 0x06 && (opcode >> 6) == 0x00 &&
+      (opcode >> 3) != 0x06) {
     return FetchLdR8U8();
   }
   if (opcode == 0xE0) {
@@ -428,8 +463,8 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchImm16<CallU16>();
   }
   // opcode = 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
-  if (((opcode >> 6) & 0x03) == 1 && ((opcode >> 3) & 0x07) != 6 &&
-      (opcode & 0x07) != 6) {
+  if (((opcode >> 6) & 0x03) == 0x01 && ((opcode >> 3) & 0x07) != 0x06 &&
+      (opcode & 0x07) != 0x06) {
     return FetchLdR8R8();
   }
   if (opcode == 0x18) {
@@ -439,19 +474,23 @@ std::shared_ptr<Cpu::Instruction> Cpu::FetchInstruction() {
     return FetchNoOperand<Ret>();
   }
   // opcode = 0b11xx0101
-  if ((opcode & 0x0F) == 5 && (opcode >> 6) == 3) {
+  if ((opcode & 0x0F) == 0x05 && (opcode >> 6) == 0x03) {
     return FetchPushR16();
   }
   // opcode = 0b11xx0001
-  if ((opcode & 0x0F) == 1 && (opcode >> 6) == 3) {
+  if ((opcode & 0x0F) == 0x01 && (opcode >> 6) == 0x03) {
     return FetchPopR16();
   }
   // opcode = 0b00xx0011
-  if ((opcode & 0x0F) == 3 && (opcode >> 6) == 0) {
+  if ((opcode & 0x0F) == 0x03 && (opcode >> 6) == 0x00) {
     return FetchIncR16();
   }
   if (opcode == 0x2A) {
     return FetchNoOperand<LdRaAhli>();
+  }
+  // opcode = 0b10110xxx
+  if ((opcode >> 3) == 0x16 && (opcode & 0x07) != 0x06) {
+    return FetchOrRaR8();
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
