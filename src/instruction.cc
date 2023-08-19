@@ -327,6 +327,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
       ExtractBits(opcode, 6, 2) == 0x00) {
     return DecodeR8<IncR8, 3>(cpu);
   }
+  if (opcode == 0x1A) {
+    return std::make_shared<LdRaAde>(pc);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -729,6 +732,21 @@ unsigned IncR8::Execute(Cpu& cpu) {
   reg_.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
+}
+
+std::string LdRaAde::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld a, (de)");
+  return std::string(buf);
+}
+
+unsigned LdRaAde::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t de = cpu.registers().de.get();
+  std::uint8_t value = cpu.memory().Read8(de);
+  cpu.registers().a.set(value);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu

@@ -372,6 +372,16 @@ class IncR8 : public Instruction {
   Register<std::uint8_t>& reg_;
 };
 
+// ld a, (de)
+class LdRaAde : public Instruction {
+ public:
+  LdRaAde(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x1A}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

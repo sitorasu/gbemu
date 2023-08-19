@@ -33,3 +33,5 @@
 
 # テスト用ROMを格納するディレクトリ
 test_rom
+
+.DS_Store
