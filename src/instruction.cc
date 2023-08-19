@@ -337,6 +337,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0x22) {
     return std::make_shared<LdAhliRa>(pc);
   }
+  if (opcode == 0x32) {
+    return std::make_shared<LdAhldRa>(pc);
+  }
   if (opcode == 0xC6) {
     return DecodeImm8<AddRaU8>(cpu);
   }
@@ -790,6 +793,18 @@ unsigned LdAhliRa::Execute(Cpu& cpu) {
   std::uint8_t a = cpu.registers().a.get();
   cpu.memory().Write8(hl, a);
   cpu.registers().hl.set(hl + 1);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string LdAhldRa::GetMnemonicString() { return "ld (hl-), a"; }
+
+unsigned LdAhldRa::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t a = cpu.registers().a.get();
+  cpu.memory().Write8(hl, a);
+  cpu.registers().hl.set(hl - 1);
   cpu.registers().pc.set(pc + length);
   return 2;
 }

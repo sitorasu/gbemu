@@ -406,6 +406,16 @@ class LdAhliRa : public Instruction {
   static const unsigned length{1};
 };
 
+// ld (hl-), a
+class LdAhldRa : public Instruction {
+ public:
+  LdAhldRa(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x32}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 // add a, u8
 class AddRaU8 : public Instruction {
  public:
