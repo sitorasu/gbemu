@@ -53,6 +53,23 @@ std::shared_ptr<Instruction> DecodeImm8(Cpu& cpu) {
   return std::make_shared<InstType>(std::move(raw_code), pc, raw_code[1]);
 }
 
+// [opcode]
+// 0b**xxx***
+//   7...N..0
+//
+// 第Nビットから上位側3ビットがレジスタのインデックス
+template <class InstType, unsigned N>
+std::shared_ptr<Instruction> DecodeR8(Cpu& cpu) {
+  static_assert(N <= 5, "Invalid specialization.");
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned reg_idx = ExtractBits(opcode, N, 3);
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::make_shared<InstType>(std::move(raw_code), pc, reg);
+}
+
 // [opcode]   [imm]
 // 0b00xx0001 <2byte_value>
 //
@@ -175,20 +192,6 @@ std::shared_ptr<Instruction> DecodeIncR16(Cpu& cpu) {
   return std::make_shared<IncR16>(std::move(raw_code), pc, reg);
 }
 
-// [opcode]
-// 0b10110xxx
-//
-// xxx: register
-std::shared_ptr<Instruction> DecodeOrRaR8(Cpu& cpu) {
-  std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  unsigned reg_idx = opcode & 0x07;
-  SingleRegister<std::uint8_t>& reg =
-      cpu.registers().GetRegister8ByIndex(reg_idx);
-  std::vector<std::uint8_t> raw_code{opcode};
-  return std::make_shared<OrRaR8>(std::move(raw_code), pc, reg);
-}
-
 // [opcode]   [imm]
 // 0b001cc000 <1byte_value>
 //
@@ -216,34 +219,6 @@ std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
   std::uint16_t imm = ConcatUInt(raw_code[1], raw_code[2]);
   return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
-}
-
-// [opcode]
-// 0b00xxx101
-//
-// xxx: register
-std::shared_ptr<Instruction> DecodeDecR8(Cpu& cpu) {
-  std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  unsigned reg_idx = ExtractBits(opcode, 3, 3);
-  SingleRegister<std::uint8_t>& reg =
-      cpu.registers().GetRegister8ByIndex(reg_idx);
-  std::vector<std::uint8_t> raw_code{opcode};
-  return std::make_shared<DecR8>(std::move(raw_code), pc, reg);
-}
-
-// [opcode]
-// 0b01110xxx
-//
-// xxx: register
-std::shared_ptr<Instruction> DecodeLdAhlR8(Cpu& cpu) {
-  std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  unsigned reg_idx = ExtractBits(opcode, 0, 3);
-  SingleRegister<std::uint8_t>& reg =
-      cpu.registers().GetRegister8ByIndex(reg_idx);
-  std::vector<std::uint8_t> raw_code{opcode};
-  return std::make_shared<LdAhlR8>(std::move(raw_code), pc, reg);
 }
 
 std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
@@ -316,7 +291,7 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   }
   // opcode = 0b10110xxx AND xxx != 0b110
   if (ExtractBits(opcode, 3, 5) == 0x16 && ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeOrRaR8(cpu);
+    return DecodeR8<OrRaR8, 0>(cpu);
   }
   // opcode = 0b001cc000
   if (ExtractBits(opcode, 5, 3) == 0x01 && ExtractBits(opcode, 0, 3) == 0x00) {
@@ -341,11 +316,11 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   // opcode = 0b00xxx101 AND xxx != 0b110
   if (ExtractBits(opcode, 0, 3) == 0x05 && ExtractBits(opcode, 3, 3) != 0x06 &&
       ExtractBits(opcode, 6, 2) == 0x00) {
-    return DecodeDecR8(cpu);
+    return DecodeR8<DecR8, 3>(cpu);
   }
   // opcode = 0b01110xxx AND xxx != 0b110
   if (ExtractBits(opcode, 3, 5) == 0x0E && ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeLdAhlR8(cpu);
+    return DecodeR8<LdAhlR8, 0>(cpu);
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }

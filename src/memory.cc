@@ -62,6 +62,9 @@ IORegisters io_regs;
 // ダミーのIEレジスタ
 std::uint8_t ie;
 
+// ダミーのVRAM
+std::vector<std::uint8_t> vram(1024 * 8);
+
 }  // namespace
 
 uint8_t Memory::Read8(std::uint16_t address) {
@@ -70,7 +73,8 @@ uint8_t Memory::Read8(std::uint16_t address) {
     return cartridge_.mbc().Read8(address);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMからの読み出し
-    UNREACHABLE("Read from VRAM is not implemented.");
+    // WARN("Read from VRAM is not implemented.");
+    return vram.at(address & 0x1FFF);
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMからの読み出し
     return cartridge_.mbc().Read8(address);
@@ -123,7 +127,8 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     cartridge_.mbc().Write8(address, value);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMへの書き込み
-    UNREACHABLE("Write to VRAM is not implemented.");
+    // WARN("Write to VRAM is not implemented.");
+    vram.at(address & 0x1FFF) = value;
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMへの書き込み
     cartridge_.mbc().Write8(address, value);
