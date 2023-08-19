@@ -1,10 +1,59 @@
 #include "memory.h"
 
 #include <cstdint>
+#include <vector>
 
 #include "utils.h"
 
 namespace gbemu {
+
+namespace {
+
+// ダミーのIOレジスタ
+class IORegisters {
+ public:
+  std::uint8_t Read(std::uint16_t address) { return GetRegAt(address); }
+  void Write(std::uint16_t address, std::uint8_t value) {
+    GetRegAt(address) = value;
+  }
+
+ private:
+  std::uint8_t& GetRegAt(std::uint16_t address) {
+    switch (address) {
+      case 0xFF07:
+        return tac_;
+      case 0xFF0F:
+        return if_;
+      case 0xFF24:
+        return nr50_;
+      case 0xFF25:
+        return nr51_;
+      case 0xFF26:
+        return nr52_;
+      case 0xFF40:
+        return lcdc_;
+      case 0xFF44:
+        return ly_;
+      default:
+        UNREACHABLE("Unknown I/O register: $%04X", address);
+    }
+  }
+
+  std::uint8_t tac_{};     // $FF07
+  std::uint8_t if_{};      // $FF0F
+  std::uint8_t nr50_{};    // $FF24
+  std::uint8_t nr51_{};    // $FF25
+  std::uint8_t nr52_{};    // $FF26
+  std::uint8_t lcdc_{};    // $FF40
+  std::uint8_t ly_{0x90};  // $FF44 VBlankの先頭で固定
+};
+
+IORegisters io_regs;
+
+// ダミーのIEレジスタ
+std::uint8_t ie;
+
+}  // namespace
 
 uint8_t Memory::Read8(std::uint16_t address) {
   if (InRange(address, 0, 0x8000)) {
@@ -30,8 +79,8 @@ uint8_t Memory::Read8(std::uint16_t address) {
     Error("Read from $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタからの読み出し
-    WARN("Read from I/O Registers is not implemented: return 0!");
-    return 0;
+    WARN("Read from I/O register is not implemented.");
+    return io_regs.Read(address);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
     return h_ram_.at(address & 0x007F);
@@ -39,7 +88,8 @@ uint8_t Memory::Read8(std::uint16_t address) {
     // レジスタIEからの読み出し
     ASSERT(address == 0xFFFF, "Read from unknown address: %d",
            static_cast<int>(address));
-    UNREACHABLE("Read from register IE is not implemented.");
+    WARN("Read from register IE is not implemented.");
+    return ie;
   }
 }
 
@@ -73,7 +123,8 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     Error("Write to $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
-    WARN("Write to I/O register is not implemented: do nothing!");
+    WARN("Write to I/O register is not implemented.");
+    io_regs.Write(address, value);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
     h_ram_.at(address & 0x007F) = value;
@@ -82,6 +133,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     ASSERT(address == 0xFFFF, "Write to unknown address: %d",
            static_cast<int>(address));
     WARN("Write to register IE is not implemented.");
+    ie = value;
   }
 }
 
