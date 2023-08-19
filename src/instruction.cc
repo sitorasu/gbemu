@@ -9,6 +9,7 @@
 #include "cpu.h"
 #include "memory.h"
 #include "register.h"
+#include "utils.h"
 
 namespace gbemu {
 
@@ -33,12 +34,11 @@ std::uint16_t Pop(Cpu& cpu) {
 // <1byte_value> <2byte_value>
 template <class InstType>
 std::shared_ptr<Instruction> DecodeImm16(Cpu& cpu) {
+  static_assert(InstType::length == 3, "Invalid specialization.");
   std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  std::uint16_t imm = cpu.memory().Read16(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode,
-                                     static_cast<std::uint8_t>(imm & 0xFF),
-                                     static_cast<std::uint8_t>(imm >> 8)};
+  std::vector<std::uint8_t> raw_code =
+      cpu.memory().ReadBytes(pc, InstType::length);
+  std::uint16_t imm = ConcatUInt(raw_code[1], raw_code[2]);
   return std::make_shared<InstType>(std::move(raw_code), pc, imm);
 }
 
@@ -46,11 +46,11 @@ std::shared_ptr<Instruction> DecodeImm16(Cpu& cpu) {
 // <1byte_value> <1byte_value>
 template <class InstType>
 std::shared_ptr<Instruction> DecodeImm8(Cpu& cpu) {
+  static_assert(InstType::length == 2, "Invalid specialization.");
   std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  std::uint8_t imm = cpu.memory().Read8(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode, imm};
-  return std::make_shared<InstType>(std::move(raw_code), pc, imm);
+  std::vector<std::uint8_t> raw_code =
+      cpu.memory().ReadBytes(pc, InstType::length);
+  return std::make_shared<InstType>(std::move(raw_code), pc, raw_code[1]);
 }
 
 // [opcode]   [imm]
@@ -59,13 +59,12 @@ std::shared_ptr<Instruction> DecodeImm8(Cpu& cpu) {
 // xx: dst register
 std::shared_ptr<Instruction> DecodeLdR16U16(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
-  std::uint16_t imm = cpu.memory().Read16(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode,
-                                     static_cast<std::uint8_t>(imm & 0xFF),
-                                     static_cast<std::uint8_t>(imm >> 8)};
+  std::vector<std::uint8_t> raw_code =
+      cpu.memory().ReadBytes(pc, LdR16U16::length);
+  std::uint8_t opcode = raw_code[0];
   unsigned reg_idx = opcode >> 4;
   Register<std::uint16_t>& reg = cpu.registers().GetRegister16ByIndex(reg_idx);
+  std::uint16_t imm = ConcatUInt(raw_code[1], raw_code[2]);
   return std::make_shared<LdR16U16>(std::move(raw_code), pc, reg, imm);
 }
 
@@ -190,6 +189,10 @@ std::shared_ptr<Instruction> DecodeOrRaR8(Cpu& cpu) {
   return std::make_shared<OrRaR8>(std::move(raw_code), pc, reg);
 }
 
+// [opcode]   [imm]
+// 0b001cc000 <1byte_value>
+//
+// cc: condition
 std::shared_ptr<Instruction> DecodeJrCondS8(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -200,6 +203,10 @@ std::shared_ptr<Instruction> DecodeJrCondS8(Cpu& cpu) {
   return std::make_shared<JrCondS8>(std::move(raw_code), pc, cond, imm);
 }
 
+// [opcode]   [imm]
+// 0b110cc100 <2byte_value>
+//
+// cc: condition
 std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -311,7 +318,7 @@ std::string Nop::GetMnemonicString() { return "nop"; }
 
 unsigned Nop::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 1;
 }
 
@@ -330,7 +337,7 @@ std::string Di::GetMnemonicString() { return "di"; }
 
 unsigned Di::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   cpu.registers().ime = false;
   return 1;
 }
@@ -344,7 +351,7 @@ std::string LdR16U16::GetMnemonicString() {
 unsigned LdR16U16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   reg_.set(imm_);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 3;
 }
 
@@ -358,7 +365,7 @@ unsigned LdA16Ra::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t a = cpu.registers().a.get();
   cpu.memory().Write8(imm_, a);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 4;
 }
 
@@ -371,7 +378,7 @@ std::string LdR8U8::GetMnemonicString() {
 unsigned LdR8U8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   reg_.set(imm_);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 2;
 }
 
@@ -385,7 +392,7 @@ unsigned LdhA8Ra::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t a = cpu.registers().a.get();
   cpu.memory().Write8(0xFF00 + imm_, a);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 3;
 }
 
@@ -397,7 +404,7 @@ std::string CallU16::GetMnemonicString() {
 
 unsigned CallU16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  Push(cpu, pc + length());
+  Push(cpu, pc + length);
   cpu.registers().pc.set(imm_);
   return 6;
 }
@@ -411,7 +418,7 @@ std::string LdR8R8::GetMnemonicString() {
 unsigned LdR8R8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   dst_.set(src_.get());
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 1;
 }
 
@@ -424,7 +431,7 @@ std::string JrS8::GetMnemonicString() {
 unsigned JrS8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint16_t disp = (imm_ >> 7) ? 0xFF00 | imm_ : imm_;  // 符号拡張
-  cpu.registers().pc.set(pc + length() + disp);
+  cpu.registers().pc.set(pc + length + disp);
   return 3;
 }
 
@@ -445,7 +452,7 @@ std::string PushR16::GetMnemonicString() {
 unsigned PushR16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   Push(cpu, reg_.get());
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 4;
 }
 
@@ -458,7 +465,7 @@ std::string PopR16::GetMnemonicString() {
 unsigned PopR16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   reg_.set(Pop(cpu));
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 3;
 }
 
@@ -471,7 +478,7 @@ std::string IncR16::GetMnemonicString() {
 unsigned IncR16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   reg_.set(reg_.get() + 1);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 2;
 }
 
@@ -483,7 +490,7 @@ unsigned LdRaAhli::Execute(Cpu& cpu) {
   std::uint8_t value = cpu.memory().Read8(hl);
   cpu.registers().a.set(value);
   cpu.registers().hl.set(hl + 1);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 2;
 }
 
@@ -505,7 +512,7 @@ unsigned OrRaR8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.reset_h_flag();
   cpu.registers().flags.reset_c_flag();
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 1;
 }
 
@@ -520,10 +527,10 @@ unsigned JrCondS8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   if (cond_) {
     std::uint16_t disp = (imm_ >> 7) ? 0xFF00 | imm_ : imm_;  // 符号拡張
-    cpu.registers().pc.set(pc + length() + disp);
+    cpu.registers().pc.set(pc + length + disp);
     return 3;
   } else {
-    cpu.registers().pc.set(pc + length());
+    cpu.registers().pc.set(pc + length);
     return 2;
   }
 }
@@ -538,7 +545,7 @@ unsigned LdhRaA8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t value = cpu.memory().Read8(0xFF00 + imm_);
   cpu.registers().a.set(value);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 3;
 }
 
@@ -572,7 +579,7 @@ unsigned CpRaU8::Execute(Cpu& cpu) {
     cpu.registers().flags.reset_c_flag();
   }
 
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 2;
 }
 
@@ -586,7 +593,7 @@ unsigned LdRaA16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t value = cpu.memory().Read8(imm_);
   cpu.registers().a.set(value);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 4;
 }
 
@@ -611,7 +618,7 @@ unsigned AndRaU8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_c_flag();
 
   cpu.registers().a.set(result);
-  cpu.registers().pc.set(pc + length());
+  cpu.registers().pc.set(pc + length);
   return 2;
 }
 
@@ -625,11 +632,11 @@ std::string CallCondU16::GetMnemonicString() {
 unsigned CallCondU16::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   if (cond_) {
-    Push(cpu, pc + length());
+    Push(cpu, pc + length);
     cpu.registers().pc.set(imm_);
     return 6;
   } else {
-    cpu.registers().pc.set(pc + length());
+    cpu.registers().pc.set(pc + length);
     return 3;
   }
 }

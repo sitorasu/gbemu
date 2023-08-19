@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 
@@ -14,6 +15,10 @@ namespace gbemu {
   va_end(args);
   std::fprintf(stderr, "\n");
   std::exit(0);
+}
+
+std::uint16_t ConcatUInt(std::uint8_t lower, std::uint8_t upper) {
+  return lower | (static_cast<std::uint16_t>(upper) << 8);
 }
 
 }  // namespace gbemu

@@ -99,6 +99,15 @@ std::uint16_t Memory::Read16(std::uint16_t address) {
   return (((std::uint16_t)upper << 8) | lower);
 }
 
+std::vector<std::uint8_t> Memory::ReadBytes(std::uint16_t address,
+                                            unsigned bytes) {
+  std::vector<std::uint8_t> v(bytes);
+  for (unsigned i = 0; i < bytes; ++i) {
+    v[i] = Read8(address + i);
+  }
+  return v;
+}
+
 void Memory::Write8(std::uint16_t address, std::uint8_t value) {
   if (InRange(address, 0, 0x8000)) {
     // カートリッジへの書き込み

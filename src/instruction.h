@@ -25,8 +25,6 @@ class Instruction {
   virtual std::string GetMnemonicString() = 0;
   // プログラムカウンタの位置の命令をデコードする。
   static std::shared_ptr<Instruction> Decode(Cpu& cpu);
-  // 命令長（単位：バイト）を返す。
-  virtual unsigned length() = 0;
   std::vector<std::uint8_t>& raw_code() { return raw_code_; }
   std::uint16_t address() { return address_; }
 
@@ -42,7 +40,7 @@ class Nop : public Instruction {
       : Instruction(std::vector<std::uint8_t>{0x00}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 };
 
 // jp u16
@@ -53,7 +51,7 @@ class JpU16 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   std::uint16_t imm_;
@@ -66,7 +64,7 @@ class Di : public Instruction {
       : Instruction(std::vector<std::uint8_t>{0xF3}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 };
 
 // ld r16, u16
@@ -77,7 +75,7 @@ class LdR16U16 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   Register<std::uint16_t>& reg_;
@@ -92,7 +90,7 @@ class LdA16Ra : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   std::uint16_t imm_;
@@ -106,7 +104,7 @@ class LdR8U8 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   Register<std::uint8_t>& reg_;
@@ -121,7 +119,7 @@ class LdhA8Ra : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   std::uint8_t imm_;
@@ -135,7 +133,7 @@ class CallU16 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   std::uint16_t imm_;
@@ -149,7 +147,7 @@ class LdR8R8 : public Instruction {
       : Instruction(std::move(raw_code), address), dst_(dst), src_(src) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 
  private:
   SingleRegister<std::uint8_t>& dst_;
@@ -164,7 +162,7 @@ class JrS8 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   std::uint8_t imm_;
@@ -177,7 +175,7 @@ class Ret : public Instruction {
       : Instruction(std::vector<std::uint8_t>{0xC9}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 };
 
 // push
@@ -188,7 +186,7 @@ class PushR16 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 
  public:
   Register<std::uint16_t>& reg_;
@@ -202,7 +200,7 @@ class PopR16 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 
  public:
   Register<std::uint16_t>& reg_;
@@ -216,7 +214,7 @@ class IncR16 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 
  public:
   Register<std::uint16_t>& reg_;
@@ -229,7 +227,7 @@ class LdRaAhli : public Instruction {
       : Instruction(std::vector<std::uint8_t>{0x2A}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 };
 
 // or a, r8
@@ -240,7 +238,7 @@ class OrRaR8 : public Instruction {
       : Instruction(std::move(raw_code), address), reg_(reg) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 1; }
+  static const unsigned length{1};
 
  private:
   SingleRegister<std::uint8_t>& reg_;
@@ -254,7 +252,7 @@ class JrCondS8 : public Instruction {
       : Instruction(std::move(raw_code), address), cond_(cond), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   bool cond_;
@@ -269,7 +267,7 @@ class LdhRaA8 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   std::uint8_t imm_;
@@ -283,7 +281,7 @@ class CpRaU8 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   std::uint8_t imm_;
@@ -297,7 +295,7 @@ class LdRaA16 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   std::uint16_t imm_;
@@ -311,7 +309,7 @@ class AndRaU8 : public Instruction {
       : Instruction(std::move(raw_code), address), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 2; }
+  static const unsigned length{2};
 
  private:
   std::uint8_t imm_;
@@ -325,7 +323,7 @@ class CallCondU16 : public Instruction {
       : Instruction(std::move(raw_code), address), cond_(cond), imm_(imm) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
-  unsigned length() override { return 3; }
+  static const unsigned length{3};
 
  private:
   bool cond_;

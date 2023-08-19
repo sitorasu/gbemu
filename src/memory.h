@@ -27,6 +27,7 @@ class Memory {
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
   std::uint8_t Read8(std::uint16_t address);
   std::uint16_t Read16(std::uint16_t address);
+  std::vector<std::uint8_t> ReadBytes(std::uint16_t address, unsigned bytes);
   void Write8(std::uint16_t address, std::uint8_t value);
   void Write16(std::uint16_t address, std::uint16_t value);
 

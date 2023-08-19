@@ -1,10 +1,10 @@
 #ifndef GBEMU_UTILS_H_
 #define GBEMU_UTILS_H_
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
 
 namespace gbemu {
@@ -62,6 +62,8 @@ namespace gbemu {
 // 第2引数以降にフォーマット文字列に埋め込む値を指定する。
 // エラーの文字列の末尾は改行される。
 [[noreturn]] void Error(const char* fmt, ...);
+
+std::uint16_t ConcatUInt(std::uint8_t lower, std::uint8_t upper);
 
 // xが区間[begin, end)に含まれるならtrue、そうでなければfalseを返す
 template <class T1, class T2, class T3>
