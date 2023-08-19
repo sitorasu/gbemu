@@ -343,6 +343,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0xC6) {
     return DecodeImm8<AddRaU8>(cpu);
   }
+  if (opcode == 0xD6) {
+    return DecodeImm8<SubRaU8>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -835,6 +838,42 @@ unsigned AddRaU8::Execute(Cpu& cpu) {
   }
 
   if (static_cast<std::uint16_t>(a) + static_cast<std::uint16_t>(imm_) > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string SubRaU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sub a, 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned SubRaU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t result = a - imm_;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (imm_ & 0x0F)) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if (a < imm_) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();

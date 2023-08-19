@@ -32,8 +32,14 @@ class IORegisters {
         return nr52_;
       case 0xFF40:
         return lcdc_;
+      case 0xFF42:
+        return scy_;
+      case 0xFF43:
+        return scx_;
       case 0xFF44:
         return ly_;
+      case 0xFF47:
+        return bgp_;
       case 0xFF4F:
         return vbk_;
       case 0xFF68:
@@ -51,7 +57,10 @@ class IORegisters {
   std::uint8_t nr51_{};       // $FF25
   std::uint8_t nr52_{};       // $FF26
   std::uint8_t lcdc_{};       // $FF40
+  std::uint8_t scy_{};        // $FF42
+  std::uint8_t scx_{};        // $FF43
   std::uint8_t ly_{0x90};     // $FF44 VBlankの先頭で固定
+  std::uint8_t bgp_{};        // $FF47
   std::uint8_t vbk_{};        // $FF4F
   std::uint8_t bcps_bgpi_{};  // $FF68
   std::uint8_t bcpd_bgpd_{};  // $FF69

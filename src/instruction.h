@@ -430,6 +430,19 @@ class AddRaU8 : public Instruction {
   std::uint8_t imm_;
 };
 
+class SubRaU8 : public Instruction {
+ public:
+  SubRaU8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+          std::uint8_t imm)
+      : Instruction(std::move(raw_code), address), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+
+ private:
+  std::uint8_t imm_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
