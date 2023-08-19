@@ -346,6 +346,11 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0xD6) {
     return DecodeImm8<SubRaU8>(cpu);
   }
+  // opcode = 0b01xxx110 AND xxx != 0b110
+  if (ExtractBits(opcode, 0, 3) == 0x06 && ExtractBits(opcode, 6, 2) == 0x01 &&
+      ExtractBits(opcode, 3, 3) != 0x06) {
+    return DecodeR8<LdR8Ahl, 3>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -880,6 +885,21 @@ unsigned SubRaU8::Execute(Cpu& cpu) {
   }
 
   cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string LdR8Ahl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld %s, (hl)", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned LdR8Ahl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  cpu.registers().a.set(value);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
