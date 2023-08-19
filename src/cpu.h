@@ -34,14 +34,15 @@ class Cpu {
     void reset_n_flag() { data_ &= ~(1 << 6); }
     void reset_h_flag() { data_ &= ~(1 << 5); }
     void reset_c_flag() { data_ &= ~(1 << 4); }
+    bool GetFlagByIndex(unsigned i);
   };
 
   using Register8Pair = RegisterPair<std::uint8_t, std::uint16_t>;
 
   class Registers {
    public:
-    SingleRegister<std::uint8_t>& GetRegister8(unsigned i);
-    Register<std::uint16_t>& GetRegister16(unsigned i);
+    SingleRegister<std::uint8_t>& GetRegister8ByIndex(unsigned i);
+    Register<std::uint16_t>& GetRegister16ByIndex(unsigned i);
     void Print();
 
     SingleRegister<std::uint8_t> a{"a"};

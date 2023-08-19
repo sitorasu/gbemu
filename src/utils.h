@@ -69,23 +69,6 @@ inline bool InRange(T1 x, T2 begin, T3 end) {
   return begin <= x && x < end;
 }
 
-// ビット幅が等しい符号なし整数から符号付き整数への変換。
-template <class UInt, class SInt>
-inline SInt CastToSigned(UInt v) {
-  constexpr SInt sint_max = std::numeric_limits<SInt>::max();
-  constexpr SInt sint_min = std::numeric_limits<SInt>::min();
-
-  static_assert(sizeof(UInt) == sizeof(SInt), "Invalid cast to signed.");
-  static_assert(
-      static_cast<UInt>(sint_min) == (static_cast<UInt>(sint_max) + 1),
-      "Invalid SInt limits.");
-
-  if (v <= sint_max) {
-    return static_cast<SInt>(v);
-  }
-  return sint_min + static_cast<SInt>(v - sint_min);
-}
-
 }  // namespace gbemu
 
 #endif  // GBEMU_UTILS_H_

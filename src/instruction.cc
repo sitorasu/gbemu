@@ -63,7 +63,7 @@ std::shared_ptr<Instruction> DecodeLdR16U16(Cpu& cpu) {
                                      static_cast<std::uint8_t>(imm & 0xFF),
                                      static_cast<std::uint8_t>(imm >> 8)};
   unsigned reg_idx = opcode >> 4;
-  Register<std::uint16_t>& reg = cpu.registers().GetRegister16(reg_idx);
+  Register<std::uint16_t>& reg = cpu.registers().GetRegister16ByIndex(reg_idx);
   return std::make_shared<LdR16U16>(std::move(raw_code), pc, reg, imm);
 }
 
@@ -76,7 +76,7 @@ std::shared_ptr<Instruction> DecodeLdR8U8(Cpu& cpu) {
   std::uint8_t opcode = cpu.memory().Read8(pc);
   std::uint8_t imm = cpu.memory().Read8(pc + 1);
   unsigned reg_idx = opcode >> 3;
-  Register<std::uint8_t>& reg = cpu.registers().GetRegister8(reg_idx);
+  Register<std::uint8_t>& reg = cpu.registers().GetRegister8ByIndex(reg_idx);
   std::vector<std::uint8_t> raw_code{opcode, imm};
   return std::make_shared<LdR8U8>(std::move(raw_code), pc, reg, imm);
 }
@@ -91,8 +91,8 @@ std::shared_ptr<Instruction> DecodeLdR8R8(Cpu& cpu) {
   std::uint8_t opcode = cpu.memory().Read8(pc);
   unsigned src_idx = opcode & 0x07;
   unsigned dst_idx = (opcode >> 3) & 0x07;
-  SingleRegister<uint8_t>& src = cpu.registers().GetRegister8(src_idx);
-  SingleRegister<uint8_t>& dst = cpu.registers().GetRegister8(dst_idx);
+  SingleRegister<uint8_t>& src = cpu.registers().GetRegister8ByIndex(src_idx);
+  SingleRegister<uint8_t>& dst = cpu.registers().GetRegister8ByIndex(dst_idx);
   std::vector<std::uint8_t> raw_code{opcode};
   return std::make_shared<LdR8R8>(std::move(raw_code), pc, dst, src);
 }
@@ -169,7 +169,7 @@ std::shared_ptr<Instruction> DecodeIncR16(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
   unsigned reg_idx = (opcode >> 4) & 0x03;
-  Register<std::uint16_t>& reg = cpu.registers().GetRegister16(reg_idx);
+  Register<std::uint16_t>& reg = cpu.registers().GetRegister16ByIndex(reg_idx);
   std::vector<std::uint8_t> raw_code{opcode};
   return std::make_shared<IncR16>(std::move(raw_code), pc, reg);
 }
@@ -182,9 +182,20 @@ std::shared_ptr<Instruction> DecodeOrRaR8(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
   unsigned reg_idx = opcode & 0x07;
-  SingleRegister<std::uint8_t>& reg = cpu.registers().GetRegister8(reg_idx);
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
   std::vector<std::uint8_t> raw_code{opcode};
   return std::make_shared<OrRaR8>(std::move(raw_code), pc, reg);
+}
+
+std::shared_ptr<Instruction> DecodeJrCondS8(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned cond_idx = (opcode >> 3) & 0x03;
+  bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
+  std::uint8_t imm = cpu.memory().Read8(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode, imm};
+  return std::make_shared<JrCondS8>(std::move(raw_code), pc, cond, imm);
 }
 
 std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
@@ -258,6 +269,10 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   // opcode = 0b10110xxx
   if ((opcode >> 3) == 0x16 && (opcode & 0x07) != 0x06) {
     return DecodeOrRaR8(cpu);
+  }
+  // opcode = 0b001cc000
+  if ((opcode >> 5) == 0x01 && (opcode & 0x07) == 0x00) {
+    return DecodeJrCondS8(cpu);
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
@@ -378,9 +393,8 @@ std::string JrS8::GetMnemonicString() {
 
 unsigned JrS8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  std::int8_t simm = CastToSigned<std::uint8_t, std::int8_t>(imm_);
-  std::uint16_t uimm = simm;  // 符号拡張
-  cpu.registers().pc.set(pc + length() + uimm);
+  std::uint16_t disp = (imm_ >> 7) ? 0xFF00 | imm_ : imm_;  // 符号拡張
+  cpu.registers().pc.set(pc + length() + disp);
   return 3;
 }
 
@@ -463,6 +477,26 @@ unsigned OrRaR8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_c_flag();
   cpu.registers().pc.set(pc + length());
   return 1;
+}
+
+std::string JrCondS8::GetMnemonicString() {
+  char buf[16];
+  static const char* cond_str[] = {"NZ", "Z", "NC", "C"};
+  unsigned cond_idx = (raw_code()[0] >> 3) & 0x03;
+  std::sprintf(buf, "jr %s, 0x%02X", cond_str[cond_idx], imm_);
+  return std::string(buf);
+}
+
+unsigned JrCondS8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  if (cond_) {
+    std::uint16_t disp = (imm_ >> 7) ? 0xFF00 | imm_ : imm_;  // 符号拡張
+    cpu.registers().pc.set(pc + length() + disp);
+    return 3;
+  } else {
+    cpu.registers().pc.set(pc + length());
+    return 2;
+  }
 }
 
 }  // namespace gbemu

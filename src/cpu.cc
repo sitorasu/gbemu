@@ -12,7 +12,7 @@
 
 namespace gbemu {
 
-SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8(unsigned i) {
+SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8ByIndex(unsigned i) {
   switch (i) {
     case 0:
       return b;
@@ -35,7 +35,7 @@ SingleRegister<std::uint8_t>& Cpu::Registers::GetRegister8(unsigned i) {
   }
 }
 
-Register<std::uint16_t>& Cpu::Registers::GetRegister16(unsigned i) {
+Register<std::uint16_t>& Cpu::Registers::GetRegister16ByIndex(unsigned i) {
   switch (i) {
     case 0:
       return bc;
@@ -47,6 +47,21 @@ Register<std::uint16_t>& Cpu::Registers::GetRegister16(unsigned i) {
       return sp;
     default:
       UNREACHABLE("Invalid register index: %u", i);
+  }
+}
+
+bool Cpu::FlagsRegister::GetFlagByIndex(unsigned i) {
+  switch (i) {
+    case 0:
+      return !z_flag();  // NZ
+    case 1:
+      return z_flag();  // Z
+    case 2:
+      return !c_flag();  // NC
+    case 3:
+      return c_flag();  // C
+    default:
+      UNREACHABLE("Invalid flag index: %u", i);
   }
 }
 
