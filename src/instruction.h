@@ -467,6 +467,16 @@ class LdAdeRa : public Instruction {
   static const unsigned length{1};
 };
 
+// xor a, (hl)
+class XorRaAhl : public Instruction {
+ public:
+  XorRaAhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xAE}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
