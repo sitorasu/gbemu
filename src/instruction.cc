@@ -322,6 +322,11 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (ExtractBits(opcode, 3, 5) == 0x0E && ExtractBits(opcode, 0, 3) != 0x06) {
     return DecodeR8<LdAhlR8, 0>(cpu);
   }
+  // opcode = 0b00xxx100 AND xxx != 0b110
+  if (ExtractBits(opcode, 0, 3) == 0x04 && ExtractBits(opcode, 3, 3) != 0x06 &&
+      ExtractBits(opcode, 6, 2) == 0x00) {
+    return DecodeR8<IncR8, 3>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -671,7 +676,7 @@ unsigned DecR8::Execute(Cpu& cpu) {
 
   cpu.registers().flags.set_n_flag();
 
-  if ((reg_value & 0xFF) < 1) {
+  if ((reg_value & 0x0F) < 1) {
     cpu.registers().flags.set_h_flag();
   } else {
     cpu.registers().flags.reset_h_flag();
@@ -692,6 +697,36 @@ unsigned LdAhlR8::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint16_t address = cpu.registers().hl.get();
   cpu.memory().Write8(address, reg_.get());
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string IncR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "inc %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned IncR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = reg_value + 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((reg_value & 0x0F) == 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  reg_.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
 }

@@ -358,6 +358,20 @@ class LdAhlR8 : public Instruction {
   SingleRegister<std::uint8_t>& reg_;
 };
 
+// inc r8
+class IncR8 : public Instruction {
+ public:
+  IncR8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+        Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ public:
+  Register<std::uint8_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
