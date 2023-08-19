@@ -232,6 +232,20 @@ std::shared_ptr<Instruction> DecodeDecR8(Cpu& cpu) {
   return std::make_shared<DecR8>(std::move(raw_code), pc, reg);
 }
 
+// [opcode]
+// 0b01110xxx
+//
+// xxx: register
+std::shared_ptr<Instruction> DecodeLdAhlR8(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned reg_idx = ExtractBits(opcode, 0, 3);
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::make_shared<LdAhlR8>(std::move(raw_code), pc, reg);
+}
+
 std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
@@ -328,6 +342,10 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (ExtractBits(opcode, 0, 3) == 0x05 && ExtractBits(opcode, 3, 3) != 0x06 &&
       ExtractBits(opcode, 6, 2) == 0x00) {
     return DecodeDecR8(cpu);
+  }
+  // opcode = 0b01110xxx AND xxx != 0b110
+  if (ExtractBits(opcode, 3, 5) == 0x0E && ExtractBits(opcode, 0, 3) != 0x06) {
+    return DecodeLdAhlR8(cpu);
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
@@ -685,6 +703,20 @@ unsigned DecR8::Execute(Cpu& cpu) {
   }
 
   reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string LdAhlR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld (hl), %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned LdAhlR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t address = cpu.registers().hl.get();
+  cpu.memory().Write8(address, reg_.get());
   cpu.registers().pc.set(pc + length);
   return 1;
 }
