@@ -209,13 +209,12 @@ std::shared_ptr<Instruction> DecodeJrCondS8(Cpu& cpu) {
 // cc: condition
 std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc);
+  std::vector<std::uint8_t> raw_code =
+      cpu.memory().ReadBytes(pc, CallCondU16::length);
+  std::uint8_t opcode = raw_code[0];
   unsigned cond_idx = (opcode >> 3) & 0x03;
   bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
-  std::uint16_t imm = cpu.memory().Read16(pc + 1);
-  std::vector<std::uint8_t> raw_code{opcode,
-                                     static_cast<std::uint8_t>(imm & 0xFF),
-                                     static_cast<std::uint8_t>(imm >> 8)};
+  std::uint16_t imm = ConcatUInt(raw_code[1], raw_code[2]);
   return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
 }
 
@@ -301,7 +300,7 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0x2A) {
     return std::make_shared<LdRaAhli>(pc);
   }
-  // opcode = 0b10110xxx
+  // opcode = 0b10110xxx AND xxx != 0b110
   if ((opcode >> 3) == 0x16 && (opcode & 0x07) != 0x06) {
     return DecodeOrRaR8(cpu);
   }
@@ -325,7 +324,7 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if ((opcode >> 5) == 0x06 && (opcode & 0x07) == 0x04) {
     return DecodeCallCondU16(cpu);
   }
-  // opcode = 0b00xxx101
+  // opcode = 0b00xxx101 AND xxx != 0b110
   if ((opcode >> 3) <= 0x07 && (opcode & 0x07) == 0x05 &&
       (opcode >> 3) != 0x06) {
     return DecodeDecR8(cpu);
