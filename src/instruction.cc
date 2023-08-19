@@ -481,7 +481,7 @@ unsigned OrRaR8::Execute(Cpu& cpu) {
 
 std::string JrCondS8::GetMnemonicString() {
   char buf[16];
-  static const char* cond_str[] = {"NZ", "Z", "NC", "C"};
+  static const char* cond_str[] = {"nz", "z", "nc", "c"};
   unsigned cond_idx = (raw_code()[0] >> 3) & 0x03;
   std::sprintf(buf, "jr %s, 0x%02X", cond_str[cond_idx], imm_);
   return std::string(buf);
