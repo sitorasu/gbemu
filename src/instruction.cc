@@ -14,6 +14,8 @@ namespace gbemu {
 
 namespace {
 
+const char* cond_str[] = {"nz", "z", "nc", "c"};
+
 void Push(Cpu& cpu, std::uint16_t value) {
   std::uint16_t sp = cpu.registers().sp.get();
   cpu.memory().Write16(sp - 2, value);
@@ -198,6 +200,18 @@ std::shared_ptr<Instruction> DecodeJrCondS8(Cpu& cpu) {
   return std::make_shared<JrCondS8>(std::move(raw_code), pc, cond, imm);
 }
 
+std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned cond_idx = (opcode >> 3) & 0x03;
+  bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
+  std::uint16_t imm = cpu.memory().Read16(pc + 1);
+  std::vector<std::uint8_t> raw_code{opcode,
+                                     static_cast<std::uint8_t>(imm & 0xFF),
+                                     static_cast<std::uint8_t>(imm >> 8)};
+  return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
+}
+
 std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
@@ -285,6 +299,10 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   }
   if (opcode == 0xE6) {
     return DecodeImm8<AndRaU8>(cpu);
+  }
+  // opcode = 0b110cc100
+  if ((opcode >> 5) == 0x06 && (opcode & 0x07) == 0x04) {
+    return DecodeCallCondU16(cpu);
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
@@ -493,7 +511,6 @@ unsigned OrRaR8::Execute(Cpu& cpu) {
 
 std::string JrCondS8::GetMnemonicString() {
   char buf[16];
-  static const char* cond_str[] = {"nz", "z", "nc", "c"};
   unsigned cond_idx = (raw_code()[0] >> 3) & 0x03;
   std::sprintf(buf, "jr %s, 0x%02X", cond_str[cond_idx], imm_);
   return std::string(buf);
@@ -596,6 +613,25 @@ unsigned AndRaU8::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length());
   return 2;
+}
+
+std::string CallCondU16::GetMnemonicString() {
+  char buf[16];
+  unsigned cond_idx = (raw_code()[0] >> 3) & 0x03;
+  std::sprintf(buf, "call %s, 0x%04X", cond_str[cond_idx], imm_);
+  return std::string(buf);
+}
+
+unsigned CallCondU16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  if (cond_) {
+    Push(cpu, pc + length());
+    cpu.registers().pc.set(imm_);
+    return 6;
+  } else {
+    cpu.registers().pc.set(pc + length());
+    return 3;
+  }
 }
 
 }  // namespace gbemu
