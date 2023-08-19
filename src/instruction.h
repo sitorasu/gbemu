@@ -457,6 +457,16 @@ class LdR8Ahl : public Instruction {
   SingleRegister<std::uint8_t>& reg_;
 };
 
+// ld (de), a
+class LdAdeRa : public Instruction {
+ public:
+  LdAdeRa(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x12}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

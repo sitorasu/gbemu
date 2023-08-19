@@ -351,6 +351,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
       ExtractBits(opcode, 3, 3) != 0x06) {
     return DecodeR8<LdR8Ahl, 3>(cpu);
   }
+  if (opcode == 0x12) {
+    return std::make_shared<LdAdeRa>(pc);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -900,6 +903,17 @@ unsigned LdR8Ahl::Execute(Cpu& cpu) {
   std::uint16_t hl = cpu.registers().hl.get();
   std::uint8_t value = cpu.memory().Read8(hl);
   cpu.registers().a.set(value);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string LdAdeRa::GetMnemonicString() { return "ld (de), a"; }
+
+unsigned LdAdeRa::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t de = cpu.registers().de.get();
+  std::uint8_t a = cpu.registers().a.get();
+  cpu.memory().Write8(de, a);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
