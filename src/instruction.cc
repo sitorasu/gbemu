@@ -277,6 +277,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0xF0) {
     return DecodeImm8<LdhRaA8>(cpu);
   }
+  if (opcode == 0xFE) {
+    return DecodeImm8<CpRaU8>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -514,6 +517,40 @@ unsigned LdhRaA8::Execute(Cpu& cpu) {
   cpu.registers().a.set(value);
   cpu.registers().pc.set(pc + length());
   return 3;
+}
+
+std::string CpRaU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "cp a, 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned CpRaU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+
+  if ((a - imm_) == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (imm_ & 0x0F)) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if (a < imm_) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().pc.set(pc + length());
+  return 2;
 }
 
 }  // namespace gbemu

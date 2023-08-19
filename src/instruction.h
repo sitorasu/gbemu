@@ -275,6 +275,20 @@ class LdhRaA8 : public Instruction {
   std::uint8_t imm_;
 };
 
+// cp a, u8
+class CpRaU8 : public Instruction {
+ public:
+  CpRaU8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+         std::uint8_t imm)
+      : Instruction(std::move(raw_code), address), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  unsigned length() override { return 2; }
+
+ private:
+  std::uint8_t imm_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
