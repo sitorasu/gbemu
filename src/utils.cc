@@ -21,4 +21,8 @@ std::uint16_t ConcatUInt(std::uint8_t lower, std::uint8_t upper) {
   return lower | (static_cast<std::uint16_t>(upper) << 8);
 }
 
+std::uint8_t ExtractBits(std::uint8_t value, unsigned pos, unsigned bits) {
+  return (value >> pos) & ((1 << bits) - 1);
+}
+
 }  // namespace gbemu

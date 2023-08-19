@@ -65,6 +65,9 @@ namespace gbemu {
 
 std::uint16_t ConcatUInt(std::uint8_t lower, std::uint8_t upper);
 
+// 第posビットからbitsビット分を切り出す
+std::uint8_t ExtractBits(std::uint8_t value, unsigned pos, unsigned bits);
+
 // xが区間[begin, end)に含まれるならtrue、そうでなければfalseを返す
 template <class T1, class T2, class T3>
 inline bool InRange(T1 x, T2 begin, T3 end) {
