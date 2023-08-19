@@ -34,18 +34,24 @@ class IORegisters {
         return lcdc_;
       case 0xFF44:
         return ly_;
+      case 0xFF68:
+        return bcps_bgpi_;
+      case 0xFF69:
+        return bcpd_bgpd_;
       default:
         UNREACHABLE("Unknown I/O register: $%04X", address);
     }
   }
 
-  std::uint8_t tac_{};     // $FF07
-  std::uint8_t if_{};      // $FF0F
-  std::uint8_t nr50_{};    // $FF24
-  std::uint8_t nr51_{};    // $FF25
-  std::uint8_t nr52_{};    // $FF26
-  std::uint8_t lcdc_{};    // $FF40
-  std::uint8_t ly_{0x90};  // $FF44 VBlankの先頭で固定
+  std::uint8_t tac_{};        // $FF07
+  std::uint8_t if_{};         // $FF0F
+  std::uint8_t nr50_{};       // $FF24
+  std::uint8_t nr51_{};       // $FF25
+  std::uint8_t nr52_{};       // $FF26
+  std::uint8_t lcdc_{};       // $FF40
+  std::uint8_t ly_{0x90};     // $FF44 VBlankの先頭で固定
+  std::uint8_t bcps_bgpi_{};  // $FF68
+  std::uint8_t bcpd_bgpd_{};  // $FF69
 };
 
 IORegisters io_regs;

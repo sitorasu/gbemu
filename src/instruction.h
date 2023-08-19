@@ -330,6 +330,20 @@ class CallCondU16 : public Instruction {
   std::uint16_t imm_;
 };
 
+// dec r8
+class DecR8 : public Instruction {
+ public:
+  DecR8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+        Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ public:
+  Register<std::uint8_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

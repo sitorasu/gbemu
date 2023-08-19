@@ -219,6 +219,20 @@ std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
 }
 
+// [opcode]
+// 0b00xxx101
+//
+// xxx: register
+std::shared_ptr<Instruction> DecodeDecR8(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned reg_idx = (opcode >> 3) & 0x07;
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::make_shared<DecR8>(std::move(raw_code), pc, reg);
+}
+
 std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
@@ -310,6 +324,11 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   // opcode = 0b110cc100
   if ((opcode >> 5) == 0x06 && (opcode & 0x07) == 0x04) {
     return DecodeCallCondU16(cpu);
+  }
+  // opcode = 0b00xxx101
+  if ((opcode >> 3) <= 0x07 && (opcode & 0x07) == 0x05 &&
+      (opcode >> 3) != 0x06) {
+    return DecodeDecR8(cpu);
   }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
@@ -639,6 +658,36 @@ unsigned CallCondU16::Execute(Cpu& cpu) {
     cpu.registers().pc.set(pc + length);
     return 3;
   }
+}
+
+std::string DecR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "dec %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned DecR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = reg_value - 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((reg_value & 0xFF) < 1) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu
