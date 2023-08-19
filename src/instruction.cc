@@ -330,6 +330,10 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (opcode == 0x1A) {
     return std::make_shared<LdRaAde>(pc);
   }
+  // opcode = 0b10101xxx AND xxx != 0b110
+  if (ExtractBits(opcode, 3, 5) == 0x15 && ExtractBits(opcode, 0, 3) != 0x06) {
+    return DecodeR8<XorRaR8, 0>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -747,6 +751,29 @@ unsigned LdRaAde::Execute(Cpu& cpu) {
   cpu.registers().a.set(value);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string XorRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "xor a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned XorRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t result = a ^ reg_.get();
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  cpu.registers().flags.reset_c_flag();
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu
