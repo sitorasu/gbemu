@@ -274,6 +274,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if ((opcode >> 5) == 0x01 && (opcode & 0x07) == 0x00) {
     return DecodeJrCondS8(cpu);
   }
+  if (opcode == 0xF0) {
+    return DecodeImm8<LdhRaA8>(cpu);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -497,6 +500,20 @@ unsigned JrCondS8::Execute(Cpu& cpu) {
     cpu.registers().pc.set(pc + length());
     return 2;
   }
+}
+
+std::string LdhRaA8::GetMnemonicString() {
+  char buf[32];
+  std::sprintf(buf, "ld a, (0xFF00 + 0x%02X)", imm_);
+  return std::string(buf);
+}
+
+unsigned LdhRaA8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t value = cpu.memory().Read8(0xFF00 + imm_);
+  cpu.registers().a.set(value);
+  cpu.registers().pc.set(pc + length());
+  return 3;
 }
 
 }  // namespace gbemu
