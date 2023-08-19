@@ -334,6 +334,9 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   if (ExtractBits(opcode, 3, 5) == 0x15 && ExtractBits(opcode, 0, 3) != 0x06) {
     return DecodeR8<XorRaR8, 0>(cpu);
   }
+  if (opcode == 0x22) {
+    return std::make_shared<LdAhliRa>(pc);
+  }
   UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
@@ -774,6 +777,18 @@ unsigned XorRaR8::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
+}
+
+std::string LdAhliRa::GetMnemonicString() { return "ld (hl+), a"; }
+
+unsigned LdAhliRa::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t a = cpu.registers().a.get();
+  cpu.memory().Write8(hl, a);
+  cpu.registers().hl.set(hl + 1);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu

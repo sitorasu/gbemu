@@ -396,6 +396,16 @@ class XorRaR8 : public Instruction {
   Register<std::uint8_t>& reg_;
 };
 
+// ld (hl+), a
+class LdAhliRa : public Instruction {
+ public:
+  LdAhliRa(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x22}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
