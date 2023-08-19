@@ -30,7 +30,8 @@ uint8_t Memory::Read8(std::uint16_t address) {
     Error("Read from $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタからの読み出し
-    UNREACHABLE("Read from I/O Registers is not implemented.");
+    WARN("Read from I/O Registers is not implemented: return 0!");
+    return 0;
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
     return h_ram_.at(address & 0x007F);
@@ -72,7 +73,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     Error("Write to $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
-    WARN("Write to I/O register is not implemented.");
+    WARN("Write to I/O register is not implemented: do nothing!");
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
     h_ram_.at(address & 0x007F) = value;
