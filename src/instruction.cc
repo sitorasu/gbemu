@@ -1,4 +1,3 @@
-
 #include "instruction.h"
 
 #include <memory>
@@ -28,6 +27,11 @@ std::uint16_t Pop(Cpu& cpu) {
   std::uint16_t value = cpu.memory().Read16(sp);
   cpu.registers().sp.set(sp + 2);
   return value;
+}
+
+template <class InstType>
+std::shared_ptr<Instruction> DecodeNoOperand(Cpu& cpu) {
+  return std::make_shared<InstType>(cpu.registers().pc.get());
 }
 
 // [opcode]      [imm]
@@ -221,143 +225,186 @@ std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
 }
 
-std::shared_ptr<Instruction> DecodePrefixed(Cpu& cpu) {
+std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  UNREACHABLE("Unknown opcode: %02X", opcode);
+}
+
+// 関数ポインタ配列Instruction::unprefixed_instructionsのコンパイル時初期化を行う
+constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
+  std::array<Instruction::DecodeFunction, 0xFF> result{};
+  for (int i = 0; i < 0xFF; i++) {
+    result[i] = DecodeUnprefixedUnknown;
+  }
+
+  result[0x00] = DecodeNoOperand<Nop>;
+  result[0x12] = DecodeNoOperand<LdAdeRa>;
+  result[0x18] = DecodeImm8<JrS8>;
+  result[0x22] = DecodeNoOperand<LdAhliRa>;
+  result[0x2A] = DecodeNoOperand<LdRaAhli>;
+  result[0x32] = DecodeNoOperand<LdAhldRa>;
+  result[0xAE] = DecodeNoOperand<XorRaAhl>;
+  result[0xC3] = DecodeImm16<JpU16>;
+  result[0xC6] = DecodeImm8<AddRaU8>;
+  result[0xC9] = DecodeNoOperand<Ret>;
+  result[0xCD] = DecodeImm16<CallU16>;
+  result[0xD6] = DecodeImm8<SubRaU8>;
+  result[0xE0] = DecodeImm8<LdhA8Ra>;
+  result[0xE6] = DecodeImm8<AndRaU8>;
+  result[0xEA] = DecodeImm16<LdA16Ra>;
+  result[0xF0] = DecodeImm8<LdhRaA8>;
+  result[0xF3] = DecodeNoOperand<Di>;
+  result[0xFA] = DecodeImm16<LdRaA16>;
+  result[0xFE] = DecodeImm8<CpRaU8>;
+
+  // opcode = 0b00xx0001
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (i << 4) | 0x01;
+    result[opcode] = DecodeLdR16U16;
+  }
+
+  // opcode = 0b00xxx110 AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (i << 3) | 0x06;
+    result[opcode] = DecodeLdR8U8;
+  }
+
+  // opcode = 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    for (std::uint8_t j = 0; j < 8; j++) {
+      if (j == 6) {
+        continue;
+      }
+      std::uint8_t opcode = (1 << 6) | (i << 3) | j;
+      result[opcode] = DecodeLdR8R8;
+    }
+  }
+
+  // opcode = 0b11xx0101
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (3 << 6) | (i << 4) | 0x05;
+    result[opcode] = DecodePushR16;
+  }
+
+  // opcode = 0b11xx0001
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (3 << 6) | (i << 4) | 0x01;
+    result[opcode] = DecodePopR16;
+  }
+
+  // opcode = 0b00xx0011
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (i << 4) | 0x03;
+    result[opcode] = DecodeIncR16;
+  }
+
+  // opcode = 0b10110xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (0x16 << 3) | i;
+    result[opcode] = DecodeR8<OrRaR8, 0>;
+  }
+
+  // opcode = 0b001cc000
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (1 << 5) | (i << 3);
+    result[opcode] = DecodeJrCondS8;
+  }
+
+  // opcode = 0b110cc100
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (6 << 5) | (i << 3) | (1 << 2);
+    result[opcode] = DecodeCallCondU16;
+  }
+
+  // opcode = 0b00xxx101 AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (i << 3) | 0x05;
+    result[opcode] = DecodeR8<DecR8, 3>;
+  }
+
+  // opcode = 0b01110xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (7 << 4) | i;
+    result[opcode] = DecodeR8<LdAhlR8, 0>;
+  }
+
+  // opcode = 0b00xxx100 AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (i << 3) | (1 << 2);
+    result[opcode] = DecodeR8<IncR8, 3>;
+  }
+
+  result[0x1A] = DecodeNoOperand<LdRaAde>;
+
+  // opcode = 0b10101xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (0x15 << 3) | i;
+    result[opcode] = DecodeR8<XorRaR8, 0>;
+  }
+
+  // opcode = 0b01xxx110 AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i == 6) {
+      continue;
+    }
+    std::uint8_t opcode = (1 << 6) | (i << 3) | 6;
+    result[opcode] = DecodeR8<LdR8Ahl, 3>;
+  }
+
+  return result;
+}
+
+std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
   UNREACHABLE("Unknown opcode: CB %02X", opcode);
 }
 
+constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
+  std::array<Instruction::DecodeFunction, 0xFF> result{};
+  for (int i = 0; i < 0xFF; ++i) {
+    result[i] = DecodePrefixedUnknown;
+  }
+  return result;
+}
+
 }  // namespace
+
+std::array<Instruction::DecodeFunction, 0xFF>
+    Instruction::unprefixed_instructions = InitUnprefixed();
+std::array<Instruction::DecodeFunction, 0xFF>
+    Instruction::prefixed_instructions = InitPrefixed();
 
 std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
   if (opcode == 0xCB) {
-    // プレフィックスありの命令をデコード
-    return DecodePrefixed(cpu);
+    return prefixed_instructions[opcode](cpu);
+  } else {
+    return unprefixed_instructions[opcode](cpu);
   }
-  if (opcode == 0x00) {
-    return std::make_shared<Nop>(pc);
-  }
-  if (opcode == 0xC3) {
-    return DecodeImm16<JpU16>(cpu);
-  }
-  if (opcode == 0xF3) {
-    return std::make_shared<Di>(pc);
-  }
-  // opcode = 0b00xx0001
-  if (ExtractBits(opcode, 0, 4) == 0x01 && ExtractBits(opcode, 4, 4) <= 0x03) {
-    return DecodeLdR16U16(cpu);
-  }
-  if (opcode == 0xEA) {
-    return DecodeImm16<LdA16Ra>(cpu);
-  }
-  // opcode = 0b00xxx110 AND xxx != 0b110
-  if (ExtractBits(opcode, 0, 3) == 0x06 && ExtractBits(opcode, 3, 5) <= 0x07 &&
-      ExtractBits(opcode, 3, 5) != 0x06) {
-    return DecodeLdR8U8(cpu);
-  }
-  if (opcode == 0xE0) {
-    return DecodeImm8<LdhA8Ra>(cpu);
-  }
-  if (opcode == 0xCD) {
-    return DecodeImm16<CallU16>(cpu);
-  }
-  // opcode = 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
-  if (ExtractBits(opcode, 6, 2) == 0x01 && ExtractBits(opcode, 3, 3) != 0x06 &&
-      ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeLdR8R8(cpu);
-  }
-  if (opcode == 0x18) {
-    return DecodeImm8<JrS8>(cpu);
-  }
-  if (opcode == 0xC9) {
-    return std::make_shared<Ret>(pc);
-  }
-  // opcode = 0b11xx0101
-  if (ExtractBits(opcode, 0, 4) == 0x05 && ExtractBits(opcode, 6, 2) == 0x03) {
-    return DecodePushR16(cpu);
-  }
-  // opcode = 0b11xx0001
-  if (ExtractBits(opcode, 0, 4) == 0x01 && ExtractBits(opcode, 6, 2) == 0x03) {
-    return DecodePopR16(cpu);
-  }
-  // opcode = 0b00xx0011
-  if (ExtractBits(opcode, 0, 4) == 0x03 && ExtractBits(opcode, 6, 2) == 0x00) {
-    return DecodeIncR16(cpu);
-  }
-  if (opcode == 0x2A) {
-    return std::make_shared<LdRaAhli>(pc);
-  }
-  // opcode = 0b10110xxx AND xxx != 0b110
-  if (ExtractBits(opcode, 3, 5) == 0x16 && ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeR8<OrRaR8, 0>(cpu);
-  }
-  // opcode = 0b001cc000
-  if (ExtractBits(opcode, 5, 3) == 0x01 && ExtractBits(opcode, 0, 3) == 0x00) {
-    return DecodeJrCondS8(cpu);
-  }
-  if (opcode == 0xF0) {
-    return DecodeImm8<LdhRaA8>(cpu);
-  }
-  if (opcode == 0xFE) {
-    return DecodeImm8<CpRaU8>(cpu);
-  }
-  if (opcode == 0xFA) {
-    return DecodeImm16<LdRaA16>(cpu);
-  }
-  if (opcode == 0xE6) {
-    return DecodeImm8<AndRaU8>(cpu);
-  }
-  // opcode = 0b110cc100
-  if (ExtractBits(opcode, 5, 3) == 0x06 && ExtractBits(opcode, 0, 3) == 0x04) {
-    return DecodeCallCondU16(cpu);
-  }
-  // opcode = 0b00xxx101 AND xxx != 0b110
-  if (ExtractBits(opcode, 0, 3) == 0x05 && ExtractBits(opcode, 3, 3) != 0x06 &&
-      ExtractBits(opcode, 6, 2) == 0x00) {
-    return DecodeR8<DecR8, 3>(cpu);
-  }
-  // opcode = 0b01110xxx AND xxx != 0b110
-  if (ExtractBits(opcode, 3, 5) == 0x0E && ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeR8<LdAhlR8, 0>(cpu);
-  }
-  // opcode = 0b00xxx100 AND xxx != 0b110
-  if (ExtractBits(opcode, 0, 3) == 0x04 && ExtractBits(opcode, 3, 3) != 0x06 &&
-      ExtractBits(opcode, 6, 2) == 0x00) {
-    return DecodeR8<IncR8, 3>(cpu);
-  }
-  if (opcode == 0x1A) {
-    return std::make_shared<LdRaAde>(pc);
-  }
-  // opcode = 0b10101xxx AND xxx != 0b110
-  if (ExtractBits(opcode, 3, 5) == 0x15 && ExtractBits(opcode, 0, 3) != 0x06) {
-    return DecodeR8<XorRaR8, 0>(cpu);
-  }
-  if (opcode == 0x22) {
-    return std::make_shared<LdAhliRa>(pc);
-  }
-  if (opcode == 0x32) {
-    return std::make_shared<LdAhldRa>(pc);
-  }
-  if (opcode == 0xC6) {
-    return DecodeImm8<AddRaU8>(cpu);
-  }
-  if (opcode == 0xD6) {
-    return DecodeImm8<SubRaU8>(cpu);
-  }
-  // opcode = 0b01xxx110 AND xxx != 0b110
-  if (ExtractBits(opcode, 0, 3) == 0x06 && ExtractBits(opcode, 6, 2) == 0x01 &&
-      ExtractBits(opcode, 3, 3) != 0x06) {
-    return DecodeR8<LdR8Ahl, 3>(cpu);
-  }
-  if (opcode == 0x12) {
-    return std::make_shared<LdAdeRa>(pc);
-  }
-  if (opcode == 0xAE) {
-    return std::make_shared<XorRaAhl>(pc);
-  }
-  UNREACHABLE("Unknown opcode: %02X\n", opcode);
 }
 
 std::string Nop::GetMnemonicString() { return "nop"; }

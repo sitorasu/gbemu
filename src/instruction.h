@@ -1,7 +1,9 @@
 #ifndef INSTRUCTION_H_
 #define INSTRUCTION_H_
 
+#include <array>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -14,6 +16,9 @@ namespace gbemu {
 // このクラスを継承したクラスで具体的な命令を表す。
 class Instruction {
  public:
+  // 命令デコード用関数の型
+  using DecodeFunction = std::shared_ptr<Instruction> (*)(Cpu&);
+
   Instruction(std::vector<std::uint8_t>&& raw_code, std::uint16_t address)
       : raw_code_(std::move(raw_code)), address_(address) {}
   virtual ~Instruction() = default;
@@ -29,8 +34,17 @@ class Instruction {
   std::uint16_t address() { return address_; }
 
  private:
-  std::vector<std::uint8_t> raw_code_;  // 生の機械語命令（リトルエンディアン）
-  std::uint16_t address_;  // 命令の配置されているアドレス
+  // 生の機械語命令（リトルエンディアン）
+  std::vector<std::uint8_t> raw_code_;
+  // 命令の配置されているアドレス
+  std::uint16_t address_;
+
+  // プレフィックスなしの命令をデコードする関数へのポインタからなる配列。
+  // i番目の要素はiをオペコードとする命令をデコードする関数へのポインタ。
+  static std::array<DecodeFunction, 0xFF> unprefixed_instructions;
+  // プレフィックスありの命令をデコードする関数へのポインタからなる配列。
+  // i番目の要素はiを(0xCBに続く)オペコードとする命令をデコードする関数へのポインタ。
+  static std::array<DecodeFunction, 0xFF> prefixed_instructions;
 };
 
 // nop
@@ -475,6 +489,13 @@ class XorRaAhl : public Instruction {
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
   static const unsigned length{1};
+};
+
+class InstructionDecoder {
+  // public:
+  //  static std::shared_ptr<Instruction> Decode(Cpu& cpu);
+
+ private:
 };
 
 }  // namespace gbemu
