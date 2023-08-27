@@ -1,6 +1,7 @@
 #include "memory.h"
 
 #include <cstdint>
+#include <iostream>
 #include <vector>
 
 #include "utils.h"
@@ -15,6 +16,11 @@ class IORegisters {
   std::uint8_t Read(std::uint16_t address) { return GetRegAt(address); }
   void Write(std::uint16_t address, std::uint8_t value) {
     GetRegAt(address) = value;
+#if 0
+    if (address == 0xFF02 && value == 0x81) {
+      std::cout << static_cast<unsigned char>(sb_) << std::flush;
+    }
+#endif
   }
 
  private:
