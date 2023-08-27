@@ -225,6 +225,18 @@ std::shared_ptr<Instruction> DecodeCallCondU16(Cpu& cpu) {
   return std::make_shared<CallCondU16>(std::move(raw_code), pc, cond, imm);
 }
 
+// [opcode]
+// 0b110cc000
+//
+// cc: condition
+std::shared_ptr<Instruction> DecodeRetCond(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned cond_idx = ExtractBits(opcode, 3, 2);
+  bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
+  return std::make_shared<RetCond>(std::vector<std::uint8_t>{opcode}, pc, cond);
+}
+
 std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -386,6 +398,12 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
       std::uint8_t opcode = (1 << 6) | (i << 3) | 0b110;
       result[opcode] = DecodeR8<LdR8Ahl, 3>;
     }
+  }
+
+  // opcode == 0b110cc000
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (0b110 << 5) | (i << 3);
+    result[opcode] = DecodeRetCond;
   }
 
   return result;
@@ -1157,6 +1175,25 @@ unsigned AdcRaU8::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string RetCond::GetMnemonicString() {
+  char buf[16];
+  unsigned cond_idx = ExtractBits(raw_code()[0], 3, 2);
+  std::sprintf(buf, "ret %s", cond_str[cond_idx]);
+  return std::string(buf);
+}
+
+unsigned RetCond::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  if (cond_) {
+    std::uint16_t address = Pop(cpu);
+    cpu.registers().pc.set(address);
+    return 5;
+  } else {
+    cpu.registers().pc.set(pc + length);
+    return 2;
+  }
 }
 
 }  // namespace gbemu

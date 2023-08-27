@@ -543,6 +543,20 @@ class AdcRaU8 : public Instruction {
   std::uint8_t imm_;
 };
 
+// ret cond
+class RetCond : public Instruction {
+ public:
+  RetCond(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+          bool cond)
+      : Instruction(std::move(raw_code), address), cond_(cond) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ private:
+  bool cond_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
