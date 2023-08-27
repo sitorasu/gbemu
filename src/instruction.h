@@ -519,6 +519,16 @@ class RrR8 : public Instruction {
   Register<std::uint8_t>& reg_;
 };
 
+// rra
+class Rra : public Instruction {
+ public:
+  Rra(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x1F}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

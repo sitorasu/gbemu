@@ -20,6 +20,10 @@ class IORegisters {
  private:
   std::uint8_t& GetRegAt(std::uint16_t address) {
     switch (address) {
+      case 0xFF01:
+        return sb_;
+      case 0xFF02:
+        return sc_;
       case 0xFF07:
         return tac_;
       case 0xFF0F:
@@ -51,6 +55,8 @@ class IORegisters {
     }
   }
 
+  std::uint8_t sb_{};         // $FF01
+  std::uint8_t sc_{};         // $FF02
   std::uint8_t tac_{};        // $FF07
   std::uint8_t if_{};         // $FF0F
   std::uint8_t nr50_{};       // $FF24
