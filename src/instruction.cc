@@ -1305,12 +1305,6 @@ unsigned AddRhlR16::Execute(Cpu& cpu) {
   std::uint16_t reg_value = reg_.get();
   std::uint16_t result = hl + reg_value;
 
-  if (result == 0) {
-    cpu.registers().flags.set_z_flag();
-  } else {
-    cpu.registers().flags.reset_z_flag();
-  }
-
   cpu.registers().flags.reset_n_flag();
 
   if ((hl & 0xFFF) + (reg_value & 0xFFF) > 0xFFF) {
