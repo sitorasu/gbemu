@@ -643,6 +643,21 @@ class OrRaU8 : public Instruction {
   std::uint8_t imm_;
 };
 
+// jp cond, u16
+class JpCondU16 : public Instruction {
+ public:
+  JpCondU16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+            bool cond, std::uint16_t imm)
+      : Instruction(std::move(raw_code), address), cond_(cond), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{3};
+
+ private:
+  bool cond_;
+  std::uint16_t imm_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

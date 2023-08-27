@@ -240,6 +240,21 @@ std::shared_ptr<Instruction> DecodeRetCond(Cpu& cpu) {
   return std::make_shared<RetCond>(std::vector<std::uint8_t>{opcode}, pc, cond);
 }
 
+// [opcode]   [imm]
+// 0b110cc010 <2byte_value>
+//
+// cc: condition
+std::shared_ptr<Instruction> DecodeJpCondU16(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::vector<std::uint8_t> raw_code =
+      cpu.memory().ReadBytes(pc, CallCondU16::length);
+  std::uint8_t opcode = raw_code[0];
+  unsigned cond_idx = ExtractBits(opcode, 3, 2);
+  bool cond = cpu.registers().flags.GetFlagByIndex(cond_idx);
+  std::uint16_t imm = ConcatUInt(raw_code[1], raw_code[2]);
+  return std::make_shared<JpCondU16>(std::move(raw_code), pc, cond, imm);
+}
+
 std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -418,6 +433,12 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   for (std::uint8_t i = 0; i < 4; i++) {
     std::uint8_t opcode = (i << 4) | 0b1001;
     result[opcode] = DecodeR16<AddRhlR16, 4>;
+  }
+
+  // opcode == 0b110cc010
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (0b110 << 5) | (i << 3) | 0b010;
+    result[opcode] = DecodeJpCondU16;
   }
 
   return result;
@@ -1397,6 +1418,24 @@ unsigned OrRaU8::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string JpCondU16::GetMnemonicString() {
+  char buf[16];
+  unsigned cond_idx = ExtractBits(raw_code()[0], 3, 2);
+  std::sprintf(buf, "jp %s, 0x%04X", cond_str[cond_idx], imm_);
+  return std::string(buf);
+}
+
+unsigned JpCondU16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  if (cond_) {
+    cpu.registers().pc.set(imm_);
+    return 4;
+  } else {
+    cpu.registers().pc.set(pc + length);
+    return 3;
+  }
 }
 
 }  // namespace gbemu
