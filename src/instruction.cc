@@ -441,6 +441,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     result[opcode] = DecodeJpCondU16;
   }
 
+  // opcode == 0b10010xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b10010 << 3) | i;
+      result[opcode] = DecodeR8<SubRaR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -1436,6 +1444,43 @@ unsigned JpCondU16::Execute(Cpu& cpu) {
     cpu.registers().pc.set(pc + length);
     return 3;
   }
+}
+
+std::string SubRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sub a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SubRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = a - reg_value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (reg_value & 0x0F)) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if (a < reg_value) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu

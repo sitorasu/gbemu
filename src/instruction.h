@@ -658,6 +658,20 @@ class JpCondU16 : public Instruction {
   std::uint16_t imm_;
 };
 
+// sub a, r8
+class SubRaR8 : public Instruction {
+ public:
+  SubRaR8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+          SingleRegister<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ private:
+  SingleRegister<std::uint8_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
