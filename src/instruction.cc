@@ -237,6 +237,19 @@ std::shared_ptr<Instruction> DecodeRetCond(Cpu& cpu) {
   return std::make_shared<RetCond>(std::vector<std::uint8_t>{opcode}, pc, cond);
 }
 
+// [opcode]
+// 0b00xx1001
+//
+// xx: src/dst register
+std::shared_ptr<Instruction> DecodeAddRhlR16(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc);
+  unsigned reg_idx = ExtractBits(opcode, 4, 2);
+  Register<std::uint16_t>& reg = cpu.registers().GetRegister16ByIndex(reg_idx);
+  std::vector<std::uint8_t> raw_code{opcode};
+  return std::make_shared<AddRhlR16>(std::move(raw_code), pc, reg);
+}
+
 std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -407,6 +420,12 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   for (std::uint8_t i = 0; i < 4; i++) {
     std::uint8_t opcode = (0b110 << 5) | (i << 3);
     result[opcode] = DecodeRetCond;
+  }
+
+  // opcode == 0b00xx1001
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (i << 4) | 0b1001;
+    result[opcode] = DecodeAddRhlR16;
   }
 
   return result;
@@ -1252,7 +1271,7 @@ unsigned DecAhl::Execute(Cpu& cpu) {
     cpu.registers().flags.reset_h_flag();
   }
 
-  cpu.registers().a.set(result);
+  cpu.registers().hl.set(result);
   cpu.registers().pc.set(pc + length);
   return 3;
 }
@@ -1279,6 +1298,45 @@ unsigned XorRaU8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_c_flag();
 
   cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string AddRhlR16::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "add hl, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned AddRhlR16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint16_t reg_value = reg_.get();
+  std::uint16_t result = hl + reg_value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((hl & 0xFFF) + (reg_value & 0xFFF) > 0xFFF) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint32_t extended_result =
+      static_cast<std::uint32_t>(hl) + static_cast<std::uint32_t>(reg_value);
+  if (extended_result > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().hl.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
