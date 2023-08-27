@@ -605,6 +605,16 @@ class AddRhlR16 : public Instruction {
   Register<std::uint16_t>& reg_;
 };
 
+// jp hl
+class JpRhl : public Instruction {
+ public:
+  JpRhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xE9}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

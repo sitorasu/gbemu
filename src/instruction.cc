@@ -295,6 +295,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xD6] = DecodeImm8<SubRaU8>;
   result[0xE0] = DecodeImm8<LdhA8Ra>;
   result[0xE6] = DecodeImm8<AndRaU8>;
+  result[0xE9] = DecodeNoOperand<JpRhl>;
   result[0xEA] = DecodeImm16<LdA16Ra>;
   result[0xEE] = DecodeImm8<XorRaU8>;
   result[0xF0] = DecodeImm8<LdhRaA8>;
@@ -1329,6 +1330,18 @@ unsigned AddRhlR16::Execute(Cpu& cpu) {
   cpu.registers().hl.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string JpRhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "jp hl");
+  return std::string(buf);
+}
+
+unsigned JpRhl::Execute(Cpu& cpu) {
+  std::uint16_t hl = cpu.registers().hl.get();
+  cpu.registers().pc.set(hl);
+  return 1;
 }
 
 }  // namespace gbemu
