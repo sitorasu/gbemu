@@ -29,6 +29,9 @@ std::uint16_t Pop(Cpu& cpu) {
   return value;
 }
 
+// オペランドを取らない命令を表すクラスInstTypeのコンストラクタが引数として
+// 命令のアドレスだけを受け取るものと仮定しているがそれを強制する仕組みがどこにもない。
+// 同様の問題がDecode**という関数全般にある。
 template <class InstType>
 std::shared_ptr<Instruction> DecodeNoOperand(Cpu& cpu) {
   return std::make_shared<InstType>(cpu.registers().pc.get());
@@ -231,6 +234,29 @@ std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
   UNREACHABLE("Unknown opcode: %02X", opcode);
 }
 
+// [prefix] [opcode]
+// 0xCB     0b**xxx***
+//            7...N..0
+//
+// オペコードの第Nビットから上位側3ビットがレジスタのインデックス
+template <class InstType, unsigned N>
+std::shared_ptr<Instruction> DecodePrefixedR8(Cpu& cpu) {
+  static_assert(N <= 5, "Invalid specialization.");
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::vector<std::uint8_t> raw_code = cpu.memory().ReadBytes(pc, 2);
+  std::uint8_t opcode = raw_code[1];
+  unsigned reg_idx = ExtractBits(opcode, N, 3);
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
+  return std::make_shared<InstType>(std::move(raw_code), pc, reg);
+}
+
+std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t opcode = cpu.memory().Read8(pc + 1);
+  UNREACHABLE("Unknown opcode: CB %02X", opcode);
+}
+
 // 関数ポインタ配列Instruction::unprefixed_instructionsのコンパイル時初期化を行う
 constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   std::array<Instruction::DecodeFunction, 0xFF> result{};
@@ -266,24 +292,21 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
 
   // opcode = 0b00xxx110 AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (i << 3) | 0x06;
+      result[opcode] = DecodeLdR8U8;
     }
-    std::uint8_t opcode = (i << 3) | 0x06;
-    result[opcode] = DecodeLdR8U8;
   }
 
   // opcode = 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
-    }
-    for (std::uint8_t j = 0; j < 8; j++) {
-      if (j == 6) {
-        continue;
+    if (i != 6) {
+      for (std::uint8_t j = 0; j < 8; j++) {
+        if (j != 6) {
+          std::uint8_t opcode = (1 << 6) | (i << 3) | j;
+          result[opcode] = DecodeLdR8R8;
+        }
       }
-      std::uint8_t opcode = (1 << 6) | (i << 3) | j;
-      result[opcode] = DecodeLdR8R8;
     }
   }
 
@@ -307,11 +330,10 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
 
   // opcode = 0b10110xxx AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (0x16 << 3) | i;
+      result[opcode] = DecodeR8<OrRaR8, 0>;
     }
-    std::uint8_t opcode = (0x16 << 3) | i;
-    result[opcode] = DecodeR8<OrRaR8, 0>;
   }
 
   // opcode = 0b001cc000
@@ -328,65 +350,64 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
 
   // opcode = 0b00xxx101 AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (i << 3) | 0x05;
+      result[opcode] = DecodeR8<DecR8, 3>;
     }
-    std::uint8_t opcode = (i << 3) | 0x05;
-    result[opcode] = DecodeR8<DecR8, 3>;
   }
 
   // opcode = 0b01110xxx AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (7 << 4) | i;
+      result[opcode] = DecodeR8<LdAhlR8, 0>;
     }
-    std::uint8_t opcode = (7 << 4) | i;
-    result[opcode] = DecodeR8<LdAhlR8, 0>;
   }
 
   // opcode = 0b00xxx100 AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (i << 3) | (1 << 2);
+      result[opcode] = DecodeR8<IncR8, 3>;
     }
-    std::uint8_t opcode = (i << 3) | (1 << 2);
-    result[opcode] = DecodeR8<IncR8, 3>;
   }
 
   result[0x1A] = DecodeNoOperand<LdRaAde>;
 
   // opcode = 0b10101xxx AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (0x15 << 3) | i;
+      result[opcode] = DecodeR8<XorRaR8, 0>;
     }
-    std::uint8_t opcode = (0x15 << 3) | i;
-    result[opcode] = DecodeR8<XorRaR8, 0>;
   }
 
   // opcode = 0b01xxx110 AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
-    if (i == 6) {
-      continue;
+    if (i != 6) {
+      std::uint8_t opcode = (1 << 6) | (i << 3) | 6;
+      result[opcode] = DecodeR8<LdR8Ahl, 3>;
     }
-    std::uint8_t opcode = (1 << 6) | (i << 3) | 6;
-    result[opcode] = DecodeR8<LdR8Ahl, 3>;
   }
 
   return result;
 }
 
-std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
-  std::uint16_t pc = cpu.registers().pc.get();
-  std::uint8_t opcode = cpu.memory().Read8(pc + 1);
-  UNREACHABLE("Unknown opcode: CB %02X", opcode);
-}
-
+// 関数ポインタ配列Instruction::Prefixed_instructionsのコンパイル時初期化を行う
 constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
   std::array<Instruction::DecodeFunction, 0xFF> result{};
   for (int i = 0; i < 0xFF; ++i) {
     result[i] = DecodePrefixedUnknown;
   }
+
+  // opcode = 0b00111xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 6) {
+      std::uint8_t opcode = (7 << 3) | i;
+      result[opcode] = DecodePrefixedR8<SrlR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -401,6 +422,7 @@ std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
   if (opcode == 0xCB) {
+    opcode = cpu.memory().Read8(pc + 1);
     return prefixed_instructions[opcode](cpu);
   } else {
     return unprefixed_instructions[opcode](cpu);
@@ -993,6 +1015,37 @@ unsigned XorRaAhl::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string SrlR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "srl %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SrlR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = reg_value >> 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+
+  if ((reg_value & 1) == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu

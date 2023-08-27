@@ -491,11 +491,18 @@ class XorRaAhl : public Instruction {
   static const unsigned length{1};
 };
 
-class InstructionDecoder {
-  // public:
-  //  static std::shared_ptr<Instruction> Decode(Cpu& cpu);
+// srl r8
+class SrlR8 : public Instruction {
+ public:
+  SrlR8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+        Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
 
- private:
+ public:
+  Register<std::uint8_t>& reg_;
 };
 
 }  // namespace gbemu
