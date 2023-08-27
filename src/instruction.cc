@@ -281,6 +281,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x22] = DecodeNoOperand<LdAhliRa>;
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
+  result[0x35] = DecodeNoOperand<DecAhl>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xC3] = DecodeImm16<JpU16>;
@@ -800,7 +801,7 @@ unsigned DecR8::Execute(Cpu& cpu) {
 
   cpu.registers().flags.set_n_flag();
 
-  if ((reg_value & 0x0F) < 1) {
+  if ((reg_value & 0x0F) == 0) {
     cpu.registers().flags.set_h_flag();
   } else {
     cpu.registers().flags.reset_h_flag();
@@ -1222,6 +1223,37 @@ unsigned OrRaAhl::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string DecAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "dec (hl)");
+  return std::string(buf);
+}
+
+unsigned DecAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = value + 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((value & 0x0F) == 0) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 3;
 }
 
 }  // namespace gbemu
