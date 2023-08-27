@@ -445,6 +445,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
     }
   }
 
+  // opcode == 0b00110xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b110 << 3) | i;
+      result[opcode] = DecodePrefixedR8<SwapR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -1336,6 +1344,32 @@ unsigned JpRhl::Execute(Cpu& cpu) {
   std::uint16_t hl = cpu.registers().hl.get();
   cpu.registers().pc.set(hl);
   return 1;
+}
+
+std::string SwapR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "swap %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SwapR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = ((reg_value & 0x0F) << 4) | ((reg_value & 0xF0) >> 4);
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  cpu.registers().flags.reset_c_flag();
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
