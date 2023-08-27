@@ -1049,7 +1049,7 @@ unsigned LdR8Ahl::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint16_t hl = cpu.registers().hl.get();
   std::uint8_t value = cpu.memory().Read8(hl);
-  cpu.registers().a.set(value);
+  reg_.set(value);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
