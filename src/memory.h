@@ -36,6 +36,8 @@ class Memory {
   constexpr static auto kInternalRamSize = 8 * 1024;
   constexpr static auto kHRamSize = 127;
   Cartridge& cartridge_;
+
+  // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;
   std::vector<std::uint8_t> h_ram_;
 };

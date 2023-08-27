@@ -1,5 +1,6 @@
 #include "instruction.h"
 
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -400,6 +401,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
     if (i != 0b110) {
       std::uint8_t opcode = (0b111 << 3) | i;
       result[opcode] = DecodePrefixedR8<SrlR8, 0>;
+    }
+  }
+
+  // opcode == 0b00011xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b11 << 3) | i;
+      result[opcode] = DecodePrefixedR8<RrR8, 0>;
     }
   }
 
@@ -1040,7 +1049,39 @@ unsigned SrlR8::Execute(Cpu& cpu) {
 
   reg_.set(result);
   cpu.registers().pc.set(pc + length);
-  return 1;
+  return 2;
+}
+
+std::string RrR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "rr %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned RrR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t result = (reg_value >> 1) | (c_flag ? (1 << 7) : 0);
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+
+  if ((reg_value & 1) == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
