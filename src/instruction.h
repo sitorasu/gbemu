@@ -557,6 +557,16 @@ class RetCond : public Instruction {
   bool cond_;
 };
 
+// or a, (hl)
+class OrRaAhl : public Instruction {
+ public:
+  OrRaAhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xB6}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

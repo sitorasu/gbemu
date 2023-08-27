@@ -282,6 +282,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
+  result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xC3] = DecodeImm16<JpU16>;
   result[0xC6] = DecodeImm8<AddRaU8>;
   result[0xC9] = DecodeNoOperand<Ret>;
@@ -1194,6 +1195,33 @@ unsigned RetCond::Execute(Cpu& cpu) {
     cpu.registers().pc.set(pc + length);
     return 2;
   }
+}
+
+std::string OrRaAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "or a, (hl)");
+  return std::string(buf);
+}
+
+unsigned OrRaAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint16_t a = cpu.registers().a.get();
+  std::uint8_t result = a | value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  cpu.registers().flags.reset_c_flag();
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
