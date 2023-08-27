@@ -274,6 +274,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xC6] = DecodeImm8<AddRaU8>;
   result[0xC9] = DecodeNoOperand<Ret>;
   result[0xCD] = DecodeImm16<CallU16>;
+  result[0xCE] = DecodeImm8<AdcRaU8>;
   result[0xD6] = DecodeImm8<SubRaU8>;
   result[0xE0] = DecodeImm8<LdhA8Ra>;
   result[0xE6] = DecodeImm8<AndRaU8>;
@@ -1115,6 +1116,47 @@ unsigned Rra::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
+}
+
+std::string AdcRaU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "adc a, 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned AdcRaU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t carry = c_flag ? 1 : 0;
+  std::uint8_t result = a + imm_ + carry;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((a & 0x0F) + (imm_ & 0x0F) + carry > 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t extended_result = static_cast<std::uint16_t>(a) +
+                                  static_cast<std::uint16_t>(imm_) +
+                                  static_cast<std::uint16_t>(carry);
+  if (extended_result > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
