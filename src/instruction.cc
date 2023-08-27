@@ -300,6 +300,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xEE] = DecodeImm8<XorRaU8>;
   result[0xF0] = DecodeImm8<LdhRaA8>;
   result[0xF3] = DecodeNoOperand<Di>;
+  result[0xF6] = DecodeImm8<OrRaU8>;
   result[0xFA] = DecodeImm16<LdRaA16>;
   result[0xFE] = DecodeImm8<CpRaU8>;
 
@@ -1368,6 +1369,32 @@ unsigned SwapR8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_c_flag();
 
   reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string OrRaU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "or a, 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned OrRaU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t result = a | imm_;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  cpu.registers().flags.reset_c_flag();
+
+  cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
