@@ -672,6 +672,20 @@ class SubRaR8 : public Instruction {
   SingleRegister<std::uint8_t>& reg_;
 };
 
+// ld (u16), sp
+class LdA16Rsp : public Instruction {
+ public:
+  LdA16Rsp(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+           std::uint16_t imm)
+      : Instruction(std::move(raw_code), address), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{3};
+
+ private:
+  std::uint16_t imm_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
