@@ -1943,7 +1943,23 @@ unsigned IncAhl::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint16_t hl = cpu.registers().hl.get();
   std::uint8_t value = cpu.memory().Read8(hl);
-  cpu.memory().Write8(hl, value + 1);
+  std::uint8_t result = value + 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((value & 0x0F) == 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  cpu.memory().Write8(hl, result);
   cpu.registers().pc.set(pc + length);
   return 3;
 }
