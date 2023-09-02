@@ -1363,7 +1363,7 @@ unsigned AddRhlR16::Execute(Cpu& cpu) {
 
   std::uint32_t extended_result =
       static_cast<std::uint32_t>(hl) + static_cast<std::uint32_t>(reg_value);
-  if (extended_result > 0xFF) {
+  if (extended_result > 0xFFFF) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();
