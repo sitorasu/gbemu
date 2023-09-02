@@ -318,6 +318,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xF0] = DecodeImm8<LdhRaA8>;
   result[0xF3] = DecodeNoOperand<Di>;
   result[0xF6] = DecodeImm8<OrRaU8>;
+  result[0xF8] = DecodeImm8<LdRhlRspS8>;
   result[0xF9] = DecodeNoOperand<LdRspRhl>;
   result[0xFA] = DecodeImm16<LdRaA16>;
   result[0xFE] = DecodeImm8<CpRaU8>;
@@ -1562,6 +1563,38 @@ unsigned AddRspS8::Execute(Cpu& cpu) {
   cpu.registers().sp.set(result);
   cpu.registers().pc.set(pc + length);
   return 4;
+}
+
+std::string LdRhlRspS8::GetMnemonicString() {
+  char buf[32];
+  std::sprintf(buf, "ld hl, sp + 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned LdRhlRspS8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t sp = cpu.registers().sp.get();
+  std::uint16_t sext_imm = (imm_ >> 7) ? (0xFF00 | imm_) : imm_;
+  std::uint16_t result = sp + sext_imm;
+
+  cpu.registers().flags.reset_z_flag();
+  cpu.registers().flags.reset_n_flag();
+
+  if ((sp & 0x0F) + (imm_ & 0x0F) > 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if ((sp & 0xFF) + imm_ > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().hl.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 3;
 }
 
 }  // namespace gbemu
