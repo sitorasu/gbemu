@@ -310,6 +310,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xCD] = DecodeImm16<CallU16>;
   result[0xCE] = DecodeImm8<AdcRaU8>;
   result[0xD6] = DecodeImm8<SubRaU8>;
+  result[0xDE] = DecodeImm8<SbcRaU8>;
   result[0xE0] = DecodeImm8<LdhA8Ra>;
   result[0xE6] = DecodeImm8<AndRaU8>;
   result[0xE8] = DecodeImm8<AddRspS8>;
@@ -1610,6 +1611,45 @@ unsigned LdAhlU8::Execute(Cpu& cpu) {
   cpu.memory().Write8(address, imm_);
   cpu.registers().pc.set(pc + length);
   return 3;
+}
+
+std::string SbcRaU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sbc a, 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned SbcRaU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t carry = c_flag ? 1 : 0;
+  std::uint8_t result = a - carry - imm_;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (imm_ & 0x0F) + carry) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t zext_imm = imm_;
+  if (a < zext_imm + carry) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
