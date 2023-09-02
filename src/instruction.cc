@@ -482,6 +482,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     }
   }
 
+  // opcode == 0b10000xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b10000 << 3) | i;
+      result[opcode] = DecodeR8<AddRaR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -2058,6 +2066,44 @@ unsigned CpRaR8::Execute(Cpu& cpu) {
     cpu.registers().flags.reset_c_flag();
   }
 
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string AddRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "add a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned AddRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = a + reg_value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((a & 0x0F) + (reg_value & 0x0F) > 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t zext_reg_value = reg_value;
+  if (a + zext_reg_value > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
 }
