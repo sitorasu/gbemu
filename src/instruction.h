@@ -786,6 +786,16 @@ class LdAbcRa : public Instruction {
   static const unsigned length{1};
 };
 
+// ld a, (hl-)
+class LdRaAhld : public Instruction {
+ public:
+  LdRaAhld(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x0A}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

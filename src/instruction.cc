@@ -304,6 +304,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x32] = DecodeNoOperand<LdAhldRa>;
   result[0x35] = DecodeNoOperand<DecAhl>;
   result[0x36] = DecodeImm8<LdAhlU8>;
+  result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xC3] = DecodeImm16<JpU16>;
@@ -1680,6 +1681,22 @@ unsigned LdAbcRa::Execute(Cpu& cpu) {
   std::uint8_t a = cpu.registers().a.get();
   std::uint16_t address = cpu.registers().bc.get();
   cpu.memory().Write8(address, a);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string LdRaAhld::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld a, (hl-)");
+  return std::string(buf);
+}
+
+unsigned LdRaAhld::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t address = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(address);
+  cpu.registers().a.set(value);
+  cpu.registers().hl.set(address - 1);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
