@@ -365,6 +365,12 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     result[opcode] = DecodeR16<IncR16, 4>;
   }
 
+  // opcode == 0b00xx1011
+  for (std::uint8_t i = 0; i < 4; i++) {
+    std::uint8_t opcode = (i << 4) | 0b1011;
+    result[opcode] = DecodeR16<DecR16, 4>;
+  }
+
   // opcode == 0b10110xxx AND xxx != 0b110
   for (std::uint8_t i = 0; i < 8; i++) {
     if (i != 0b110) {
@@ -1508,6 +1514,19 @@ unsigned LdRspRhl::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint16_t hl = cpu.registers().hl.get();
   cpu.registers().sp.set(hl);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string DecR16::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "dec %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned DecR16::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  reg_.set(reg_.get() - 1);
   cpu.registers().pc.set(pc + length);
   return 2;
 }

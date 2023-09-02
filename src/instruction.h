@@ -696,6 +696,20 @@ class LdRspRhl : public Instruction {
   static const unsigned length{1};
 };
 
+// dec r16
+class DecR16 : public Instruction {
+ public:
+  DecR16(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+         Register<std::uint16_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ public:
+  Register<std::uint16_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
