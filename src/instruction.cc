@@ -301,6 +301,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
   result[0x35] = DecodeNoOperand<DecAhl>;
+  result[0x36] = DecodeImm8<LdAhlU8>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xC3] = DecodeImm16<JpU16>;
@@ -1593,6 +1594,20 @@ unsigned LdRhlRspS8::Execute(Cpu& cpu) {
   }
 
   cpu.registers().hl.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 3;
+}
+
+std::string LdAhlU8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "ld (hl), 0x%02X", imm_);
+  return std::string(buf);
+}
+
+unsigned LdAhlU8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t address = cpu.registers().hl.get();
+  cpu.memory().Write8(address, imm_);
   cpu.registers().pc.set(pc + length);
   return 3;
 }
