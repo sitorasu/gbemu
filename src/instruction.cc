@@ -307,6 +307,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
+  result[0xBE] = DecodeNoOperand<CpRaAhl>;
   result[0xC3] = DecodeImm16<JpU16>;
   result[0xC6] = DecodeImm8<AddRaU8>;
   result[0xC9] = DecodeNoOperand<Ret>;
@@ -1697,6 +1698,42 @@ unsigned LdRaAhld::Execute(Cpu& cpu) {
   std::uint8_t value = cpu.memory().Read8(address);
   cpu.registers().a.set(value);
   cpu.registers().hl.set(address - 1);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string CpRaAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "cp a, (hl)");
+  return std::string(buf);
+}
+
+unsigned CpRaAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+
+  if ((a - value) == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (value & 0x0F)) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if (a < value) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
   cpu.registers().pc.set(pc + length);
   return 2;
 }
