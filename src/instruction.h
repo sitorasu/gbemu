@@ -810,7 +810,7 @@ class CpRaAhl : public Instruction {
 class AddRaAhl : public Instruction {
  public:
   AddRaAhl(std::uint16_t address)
-      : Instruction(std::vector<std::uint8_t>{0xBE}, address) {}
+      : Instruction(std::vector<std::uint8_t>{0x86}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
   static const unsigned length{1};
@@ -820,7 +820,17 @@ class AddRaAhl : public Instruction {
 class AdcRaAhl : public Instruction {
  public:
   AdcRaAhl(std::uint16_t address)
-      : Instruction(std::vector<std::uint8_t>{0xBE}, address) {}
+      : Instruction(std::vector<std::uint8_t>{0x8E}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
+// sub a, (hl)
+class SubRaAhl : public Instruction {
+ public:
+  SubRaAhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x96}, address) {}
   std::string GetMnemonicString() override;
   unsigned Execute(Cpu& cpu) override;
   static const unsigned length{1};

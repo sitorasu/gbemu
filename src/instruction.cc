@@ -307,6 +307,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0x86] = DecodeNoOperand<AddRaAhl>;
   result[0x8E] = DecodeNoOperand<AdcRaAhl>;
+  result[0x96] = DecodeNoOperand<SubRaAhl>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xBE] = DecodeNoOperand<CpRaAhl>;
@@ -1812,6 +1813,44 @@ unsigned AdcRaAhl::Execute(Cpu& cpu) {
                                   static_cast<std::uint16_t>(value) +
                                   static_cast<std::uint16_t>(carry);
   if (extended_result > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string SubRaAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sub a, (hl)");
+  return std::string(buf);
+}
+
+unsigned SubRaAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = a - value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (value & 0x0F)) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  if (a < value) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();
