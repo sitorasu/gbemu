@@ -302,6 +302,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x22] = DecodeNoOperand<LdAhliRa>;
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
+  result[0x34] = DecodeNoOperand<IncAhl>;
   result[0x35] = DecodeNoOperand<DecAhl>;
   result[0x36] = DecodeImm8<LdAhlU8>;
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
@@ -1929,6 +1930,21 @@ unsigned AndRaAhl::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string IncAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "inc (hl)");
+  return std::string(buf);
+}
+
+unsigned IncAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  cpu.memory().Write8(hl, value + 1);
+  cpu.registers().pc.set(pc + length);
+  return 3;
 }
 
 }  // namespace gbemu
