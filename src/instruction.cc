@@ -301,6 +301,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x1F] = DecodeNoOperand<Rra>;
   result[0x22] = DecodeNoOperand<LdAhliRa>;
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
+  result[0x2F] = DecodeNoOperand<Cpl>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
   result[0x34] = DecodeNoOperand<IncAhl>;
   result[0x35] = DecodeNoOperand<DecAhl>;
@@ -1943,6 +1944,22 @@ unsigned IncAhl::Execute(Cpu& cpu) {
   std::uint16_t hl = cpu.registers().hl.get();
   std::uint8_t value = cpu.memory().Read8(hl);
   cpu.memory().Write8(hl, value + 1);
+  cpu.registers().pc.set(pc + length);
+  return 3;
+}
+
+std::string Cpl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "cpl");
+  return std::string(buf);
+}
+
+unsigned Cpl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  cpu.registers().a.set(~a);
+  cpu.registers().flags.set_n_flag();
+  cpu.registers().flags.set_h_flag();
   cpu.registers().pc.set(pc + length);
   return 3;
 }

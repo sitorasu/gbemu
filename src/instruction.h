@@ -866,6 +866,16 @@ class IncAhl : public Instruction {
   static const unsigned length{1};
 };
 
+// cpl
+class Cpl : public Instruction {
+ public:
+  Cpl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x2F}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
