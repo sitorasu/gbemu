@@ -306,6 +306,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x34] = DecodeNoOperand<IncAhl>;
   result[0x35] = DecodeNoOperand<DecAhl>;
   result[0x36] = DecodeImm8<LdAhlU8>;
+  result[0x37] = DecodeNoOperand<Scf>;
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0x86] = DecodeNoOperand<AddRaAhl>;
   result[0x8E] = DecodeNoOperand<AdcRaAhl>;
@@ -1977,7 +1978,22 @@ unsigned Cpl::Execute(Cpu& cpu) {
   cpu.registers().flags.set_n_flag();
   cpu.registers().flags.set_h_flag();
   cpu.registers().pc.set(pc + length);
-  return 3;
+  return 1;
+}
+
+std::string Scf::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "scf");
+  return std::string(buf);
+}
+
+unsigned Scf::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  cpu.registers().flags.set_c_flag();
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu
