@@ -1665,7 +1665,7 @@ unsigned LdRaAbc::Execute(Cpu& cpu) {
   std::uint8_t value = cpu.memory().Read8(address);
   cpu.registers().a.set(value);
   cpu.registers().pc.set(pc + length);
-  return 3;
+  return 2;
 }
 
 }  // namespace gbemu
