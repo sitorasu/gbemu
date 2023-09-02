@@ -306,6 +306,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x36] = DecodeImm8<LdAhlU8>;
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0x86] = DecodeNoOperand<AddRaAhl>;
+  result[0x8E] = DecodeNoOperand<AdcRaAhl>;
   result[0xAE] = DecodeNoOperand<XorRaAhl>;
   result[0xB6] = DecodeNoOperand<OrRaAhl>;
   result[0xBE] = DecodeNoOperand<CpRaAhl>;
@@ -1768,6 +1769,49 @@ unsigned AddRaAhl::Execute(Cpu& cpu) {
 
   std::uint16_t zext_value = value;
   if (a + zext_value > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string AdcRaAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "adc a, (hl)");
+  return std::string(buf);
+}
+
+unsigned AdcRaAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t carry = c_flag ? 1 : 0;
+  std::uint8_t result = a + value + carry;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((a & 0x0F) + (value & 0x0F) + carry > 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t extended_result = static_cast<std::uint16_t>(a) +
+                                  static_cast<std::uint16_t>(value) +
+                                  static_cast<std::uint16_t>(carry);
+  if (extended_result > 0xFF) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();
