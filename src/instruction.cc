@@ -2155,7 +2155,7 @@ unsigned AdcRaR8::Execute(Cpu& cpu) {
 
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
-  return 2;
+  return 1;
 }
 
 }  // namespace gbemu
