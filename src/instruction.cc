@@ -490,6 +490,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     }
   }
 
+  // opcode == 0b10001xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b10001 << 3) | i;
+      result[opcode] = DecodeR8<AdcRaR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -2106,6 +2114,48 @@ unsigned AddRaR8::Execute(Cpu& cpu) {
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
   return 1;
+}
+
+std::string AdcRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "adc a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned AdcRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t reg_value = reg_.get();
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t carry = c_flag ? 1 : 0;
+  std::uint8_t result = a + reg_value + carry;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+
+  if ((a & 0x0F) + (reg_value & 0x0F) + carry > 0x0F) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t extended_result = static_cast<std::uint16_t>(a) +
+                                  static_cast<std::uint16_t>(reg_value) +
+                                  static_cast<std::uint16_t>(carry);
+  if (extended_result > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
