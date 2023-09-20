@@ -498,6 +498,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     }
   }
 
+  // opcode == 0b10011xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b10011 << 3) | i;
+      result[opcode] = DecodeR8<SbcRaR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -2148,6 +2156,46 @@ unsigned AdcRaR8::Execute(Cpu& cpu) {
                                   static_cast<std::uint16_t>(reg_value) +
                                   static_cast<std::uint16_t>(carry);
   if (extended_result > 0xFF) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string SbcRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sbc a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SbcRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t reg_value = reg_.get();
+  bool c_flag = cpu.registers().flags.c_flag();
+  std::uint8_t carry = c_flag ? 1 : 0;
+  std::uint8_t result = a - carry - reg_value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.set_n_flag();
+
+  if ((a & 0x0F) < (reg_value & 0x0F) + carry) {
+    cpu.registers().flags.set_h_flag();
+  } else {
+    cpu.registers().flags.reset_h_flag();
+  }
+
+  std::uint16_t zext_imm = reg_value;
+  if (a < zext_imm + carry) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();
