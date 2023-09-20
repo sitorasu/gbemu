@@ -506,6 +506,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     }
   }
 
+  // opcode == 0b10100xxx AND xxx != 0b110
+  for (std::uint8_t i = 0; i < 8; i++) {
+    if (i != 0b110) {
+      std::uint8_t opcode = (0b10100 << 3) | i;
+      result[opcode] = DecodeR8<AndRaR8, 0>;
+    }
+  }
+
   return result;
 }
 
@@ -2200,6 +2208,32 @@ unsigned SbcRaR8::Execute(Cpu& cpu) {
   } else {
     cpu.registers().flags.reset_c_flag();
   }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string AndRaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "and a, %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned AndRaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t result = a & reg_value;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.set_h_flag();
+  cpu.registers().flags.reset_c_flag();
 
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
