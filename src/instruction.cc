@@ -293,6 +293,7 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
 
   result[0x00] = DecodeNoOperand<Nop>;
   result[0x02] = DecodeNoOperand<LdAbcRa>;
+  result[0x07] = DecodeNoOperand<Rlca>;
   result[0x08] = DecodeImm16<LdA16Rsp>;
   result[0x0A] = DecodeNoOperand<LdRaAbc>;
   result[0x12] = DecodeNoOperand<LdAdeRa>;
@@ -2234,6 +2235,32 @@ unsigned AndRaR8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.set_h_flag();
   cpu.registers().flags.reset_c_flag();
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string Rlca::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "rlca");
+  return std::string(buf);
+}
+
+unsigned Rlca::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t a_bit7 = a >> 7;
+  std::uint8_t result = ((a & 0x7F) << 1) | a_bit7;
+
+  cpu.registers().flags.reset_z_flag();
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  if (a_bit7 == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
 
   cpu.registers().a.set(result);
   cpu.registers().pc.set(pc + length);
