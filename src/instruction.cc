@@ -294,10 +294,11 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0x00] = DecodeNoOperand<Nop>;
   result[0x02] = DecodeNoOperand<LdAbcRa>;
   result[0x07] = DecodeNoOperand<Rlca>;
-  result[0x17] = DecodeNoOperand<Rla>;
   result[0x08] = DecodeImm16<LdA16Rsp>;
   result[0x0A] = DecodeNoOperand<LdRaAbc>;
+  result[0x0F] = DecodeNoOperand<Rrca>;
   result[0x12] = DecodeNoOperand<LdAdeRa>;
+  result[0x17] = DecodeNoOperand<Rla>;
   result[0x18] = DecodeImm8<JrS8>;
   result[0x1A] = DecodeNoOperand<LdRaAde>;
   result[0x1F] = DecodeNoOperand<Rra>;
@@ -1234,12 +1235,7 @@ unsigned Rra::Execute(Cpu& cpu) {
   bool c_flag = cpu.registers().flags.c_flag();
   std::uint8_t result = (a >> 1) | (c_flag ? (1 << 7) : 0);
 
-  if (result == 0) {
-    cpu.registers().flags.set_z_flag();
-  } else {
-    cpu.registers().flags.reset_z_flag();
-  }
-
+  cpu.registers().flags.reset_z_flag();
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.reset_h_flag();
 
@@ -2285,6 +2281,32 @@ unsigned Rla::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.reset_h_flag();
   if (a_bit7 == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 1;
+}
+
+std::string Rrca::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "rrca");
+  return std::string(buf);
+}
+
+unsigned Rrca::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  std::uint8_t a_bit0 = a & 1;
+  std::uint8_t result = (a >> 1) | (a_bit0 << 7);
+
+  cpu.registers().flags.reset_z_flag();
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  if (a_bit0 == 1) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();
