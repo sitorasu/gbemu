@@ -976,6 +976,16 @@ class Rlca : public Instruction {
   static const unsigned length{1};
 };
 
+// rla
+class Rla : public Instruction {
+ public:
+  Rla(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x17}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
