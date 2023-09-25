@@ -341,17 +341,60 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
   result[0xFA] = DecodeImm16<LdRaA16>;
   result[0xFE] = DecodeImm8<CpRaU8>;
 
-  // opcode == 0b00xx0001
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (i << 4) | 0b0001;
-    result[opcode] = DecodeLdR16U16;
-  }
-
-  // opcode == 0b00xxx110 AND xxx != 0b110
+  std::uint8_t opcode = 0;
   for (std::uint8_t i = 0; i < 8; i++) {
     if (i != 0b110) {
-      std::uint8_t opcode = (i << 3) | 0b110;
+      // opcode == 0b00xxx110 AND xxx != 0b110
+      opcode = (i << 3) | 0b110;
       result[opcode] = DecodeLdR8U8;
+
+      // opcode == 0b10110xxx AND xxx != 0b110
+      opcode = (0b10110 << 3) | i;
+      result[opcode] = DecodeR8<OrRaR8, 0>;
+
+      // opcode == 0b00xxx101 AND xxx != 0b110
+      opcode = (i << 3) | 0b101;
+      result[opcode] = DecodeR8<DecR8, 3>;
+
+      // opcode == 0b01110xxx AND xxx != 0b110
+      opcode = (0b01110 << 3) | i;
+      result[opcode] = DecodeR8<LdAhlR8, 0>;
+
+      // opcode == 0b00xxx100 AND xxx != 0b110
+      opcode = (i << 3) | 0b100;
+      result[opcode] = DecodeR8<IncR8, 3>;
+
+      // opcode == 0b10101xxx AND xxx != 0b110
+      opcode = (0b10101 << 3) | i;
+      result[opcode] = DecodeR8<XorRaR8, 0>;
+
+      // opcode == 0b01xxx110 AND xxx != 0b110
+      opcode = (1 << 6) | (i << 3) | 0b110;
+      result[opcode] = DecodeR8<LdR8Ahl, 3>;
+
+      // opcode == 0b10010xxx AND xxx != 0b110
+      opcode = (0b10010 << 3) | i;
+      result[opcode] = DecodeR8<SubRaR8, 0>;
+
+      // opcode == 0b10111xxx AND xxx != 0b110
+      opcode = (0b10111 << 3) | i;
+      result[opcode] = DecodeR8<CpRaR8, 0>;
+
+      // opcode == 0b10000xxx AND xxx != 0b110
+      opcode = (0b10000 << 3) | i;
+      result[opcode] = DecodeR8<AddRaR8, 0>;
+
+      // opcode == 0b10001xxx AND xxx != 0b110
+      opcode = (0b10001 << 3) | i;
+      result[opcode] = DecodeR8<AdcRaR8, 0>;
+
+      // opcode == 0b10011xxx AND xxx != 0b110
+      opcode = (0b10011 << 3) | i;
+      result[opcode] = DecodeR8<SbcRaR8, 0>;
+
+      // opcode == 0b10100xxx AND xxx != 0b110
+      opcode = (0b10100 << 3) | i;
+      result[opcode] = DecodeR8<AndRaR8, 0>;
     }
   }
 
@@ -360,161 +403,53 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
     if (i != 0b110) {
       for (std::uint8_t j = 0; j < 8; j++) {
         if (j != 0b110) {
-          std::uint8_t opcode = (1 << 6) | (i << 3) | j;
+          opcode = (1 << 6) | (i << 3) | j;
           result[opcode] = DecodeLdR8R8;
         }
       }
     }
   }
 
-  // opcode == 0b11xx0101
   for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (0b11 << 6) | (i << 4) | 0b0101;
+    // opcode == 0b00xx0001
+    opcode = (i << 4) | 0b0001;
+    result[opcode] = DecodeLdR16U16;
+
+    // opcode == 0b11xx0101
+    opcode = (0b11 << 6) | (i << 4) | 0b0101;
     result[opcode] = DecodePushR16;
-  }
 
-  // opcode == 0b11xx0001
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (0b11 << 6) | (i << 4) | 0b0001;
+    // opcode == 0b11xx0001
+    opcode = (0b11 << 6) | (i << 4) | 0b0001;
     result[opcode] = DecodePopR16;
-  }
 
-  // opcode == 0b00xx0011
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (i << 4) | 0b0011;
+    // opcode == 0b00xx0011
+    opcode = (i << 4) | 0b0011;
     result[opcode] = DecodeR16<IncR16, 4>;
-  }
 
-  // opcode == 0b00xx1011
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (i << 4) | 0b1011;
+    // opcode == 0b00xx1011
+    opcode = (i << 4) | 0b1011;
     result[opcode] = DecodeR16<DecR16, 4>;
-  }
 
-  // opcode == 0b10110xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10110 << 3) | i;
-      result[opcode] = DecodeR8<OrRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b001cc000
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (1 << 5) | (i << 3);
+    // opcode == 0b001cc000
+    opcode = (1 << 5) | (i << 3);
     result[opcode] = DecodeJrCondS8;
-  }
 
-  // opcode == 0b110cc100
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (0b110 << 5) | (i << 3) | 0b100;
+    // opcode == 0b110cc100
+    opcode = (0b110 << 5) | (i << 3) | 0b100;
     result[opcode] = DecodeCallCondU16;
-  }
 
-  // opcode == 0b00xxx101 AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (i << 3) | 0b101;
-      result[opcode] = DecodeR8<DecR8, 3>;
-    }
-  }
-
-  // opcode == 0b01110xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b01110 << 3) | i;
-      result[opcode] = DecodeR8<LdAhlR8, 0>;
-    }
-  }
-
-  // opcode == 0b00xxx100 AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (i << 3) | 0b100;
-      result[opcode] = DecodeR8<IncR8, 3>;
-    }
-  }
-
-  // opcode == 0b10101xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10101 << 3) | i;
-      result[opcode] = DecodeR8<XorRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b01xxx110 AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (1 << 6) | (i << 3) | 0b110;
-      result[opcode] = DecodeR8<LdR8Ahl, 3>;
-    }
-  }
-
-  // opcode == 0b110cc000
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (0b110 << 5) | (i << 3);
+    // opcode == 0b110cc000
+    opcode = (0b110 << 5) | (i << 3);
     result[opcode] = DecodeRetCond;
-  }
 
-  // opcode == 0b00xx1001
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (i << 4) | 0b1001;
+    // opcode == 0b00xx1001
+    opcode = (i << 4) | 0b1001;
     result[opcode] = DecodeR16<AddRhlR16, 4>;
-  }
 
-  // opcode == 0b110cc010
-  for (std::uint8_t i = 0; i < 4; i++) {
-    std::uint8_t opcode = (0b110 << 5) | (i << 3) | 0b010;
+    // opcode == 0b110cc010
+    opcode = (0b110 << 5) | (i << 3) | 0b010;
     result[opcode] = DecodeJpCondU16;
-  }
-
-  // opcode == 0b10010xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10010 << 3) | i;
-      result[opcode] = DecodeR8<SubRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b10111xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10111 << 3) | i;
-      result[opcode] = DecodeR8<CpRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b10000xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10000 << 3) | i;
-      result[opcode] = DecodeR8<AddRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b10001xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10001 << 3) | i;
-      result[opcode] = DecodeR8<AdcRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b10011xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10011 << 3) | i;
-      result[opcode] = DecodeR8<SbcRaR8, 0>;
-    }
-  }
-
-  // opcode == 0b10100xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b10100 << 3) | i;
-      result[opcode] = DecodeR8<AndRaR8, 0>;
-    }
   }
 
   return result;
@@ -527,34 +462,23 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
     result[i] = DecodePrefixedUnknown;
   }
 
-  // opcode == 0b00111xxx AND xxx != 0b110
+  std::uint8_t opcode = 0;
   for (std::uint8_t i = 0; i < 8; i++) {
     if (i != 0b110) {
-      std::uint8_t opcode = (0b111 << 3) | i;
+      // opcode == 0b00111xxx AND xxx != 0b110
+      opcode = (0b111 << 3) | i;
       result[opcode] = DecodePrefixedR8<SrlR8, 0>;
-    }
-  }
 
-  // opcode == 0b00011xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b11 << 3) | i;
+      // opcode == 0b00011xxx AND xxx != 0b110
+      opcode = (0b11 << 3) | i;
       result[opcode] = DecodePrefixedR8<RrR8, 0>;
-    }
-  }
 
-  // opcode == 0b00110xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = (0b110 << 3) | i;
+      // opcode == 0b00110xxx AND xxx != 0b110
+      opcode = (0b110 << 3) | i;
       result[opcode] = DecodePrefixedR8<SwapR8, 0>;
-    }
-  }
 
-  // opcode == 0b00000xxx AND xxx != 0b110
-  for (std::uint8_t i = 0; i < 8; i++) {
-    if (i != 0b110) {
-      std::uint8_t opcode = i;
+      // opcode == 0b00000xxx AND xxx != 0b110
+      opcode = i;
       result[opcode] = DecodePrefixedR8<RlcR8, 0>;
     }
   }
