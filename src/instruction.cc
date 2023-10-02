@@ -488,6 +488,10 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
       // opcode == 0b00010xxx AND xxx != 0b110
       opcode = (0b10 << 3) | i;
       result[opcode] = DecodePrefixedR8<RlR8, 0>;
+
+      // opcode == 0b00100xxx AND xxx != 0b110
+      opcode = (0b100 << 3) | i;
+      result[opcode] = DecodePrefixedR8<SlaR8, 0>;
     }
   }
 
@@ -2331,6 +2335,36 @@ unsigned RlR8::Execute(Cpu& cpu) {
   std::uint8_t reg_bit7 = reg_value >> 7;
   std::uint8_t carry = cpu.registers().flags.c_flag() ? 1 : 0;
   std::uint8_t result = ((reg_value & 0x7F) << 1) | carry;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+  if (reg_bit7 == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string SlaR8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "sla %s", reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SlaR8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  std::uint8_t reg_bit7 = reg_value >> 7;
+  std::uint8_t result = (reg_value & 0x7F) << 1;
 
   if (result == 0) {
     cpu.registers().flags.set_z_flag();

@@ -1038,6 +1038,20 @@ class RlR8 : public Instruction {
   Register<std::uint8_t>& reg_;
 };
 
+// sla r8
+class SlaR8 : public Instruction {
+ public:
+  SlaR8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+        Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+
+ public:
+  Register<std::uint8_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
