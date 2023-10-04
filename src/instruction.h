@@ -1066,6 +1066,21 @@ class SraR8 : public Instruction {
   Register<std::uint8_t>& reg_;
 };
 
+// bit u3, r8
+class BitU3R8 : public Instruction {
+ public:
+  BitU3R8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+          std::uint8_t imm, Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), imm_(imm), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+
+ public:
+  std::uint8_t imm_;
+  Register<std::uint8_t>& reg_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

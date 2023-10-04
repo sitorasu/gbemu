@@ -278,6 +278,24 @@ std::shared_ptr<Instruction> DecodePrefixedR8(Cpu& cpu) {
   return std::make_shared<InstType>(std::move(raw_code), pc, reg);
 }
 
+// [prefix] [opcode]
+// 0xCB     0b**yyy**xxx**
+//            7...M....N.0
+//
+// オペコードの第Mビットから上位側3ビットが即値
+// オペコードの第Nビットから上位側3ビットがレジスタのインデックス
+template <class InstType, unsigned M, unsigned N>
+std::shared_ptr<Instruction> DecodePrefixedU3R8(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::vector<std::uint8_t> raw_code = cpu.memory().ReadBytes(pc, 2);
+  std::uint8_t opcode = raw_code[1];
+  unsigned imm = ExtractBits(opcode, M, 3);
+  unsigned reg_idx = ExtractBits(opcode, N, 3);
+  SingleRegister<std::uint8_t>& reg =
+      cpu.registers().GetRegister8ByIndex(reg_idx);
+  return std::make_shared<InstType>(std::move(raw_code), pc, imm, reg);
+}
+
 std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
@@ -496,6 +514,12 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
       // opcode == 0b00101xxx AND xxx != 0b110
       opcode = (0b101 << 3) | i;
       result[opcode] = DecodePrefixedR8<SraR8, 0>;
+
+      // opcode == 0b01yyyxxx AND xxx != 0b110
+      for (std::uint8_t j = 0; j < 8; j++) {
+        opcode = (1 << 6) | (j << 3) | i;
+        result[opcode] = DecodePrefixedU3R8<BitU3R8, 3, 0>;
+      }
     }
   }
 
@@ -2414,6 +2438,30 @@ unsigned SraR8::Execute(Cpu& cpu) {
   }
 
   reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string BitU3R8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "bit %d, %s", imm_, reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned BitU3R8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  ASSERT(imm_ <= 7, "Invalid immediate for BitU3R8: %d", imm_);
+  std::uint8_t result = reg_value & (1 << imm_);
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.set_h_flag();
+
   cpu.registers().pc.set(pc + length);
   return 2;
 }
