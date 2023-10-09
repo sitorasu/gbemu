@@ -41,10 +41,10 @@ class Instruction {
 
   // プレフィックスなしの命令をデコードする関数へのポインタからなる配列。
   // i番目の要素はiをオペコードとする命令をデコードする関数へのポインタ。
-  static std::array<DecodeFunction, 0xFF> unprefixed_instructions;
+  static std::array<DecodeFunction, 256> unprefixed_instructions;
   // プレフィックスありの命令をデコードする関数へのポインタからなる配列。
   // i番目の要素はiを(0xCBに続く)オペコードとする命令をデコードする関数へのポインタ。
-  static std::array<DecodeFunction, 0xFF> prefixed_instructions;
+  static std::array<DecodeFunction, 256> prefixed_instructions;
 };
 
 // nop
@@ -1085,6 +1085,21 @@ class BitU3R8 : public Instruction {
 class ResU3R8 : public Instruction {
  public:
   ResU3R8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+          std::uint8_t imm, Register<std::uint8_t>& reg)
+      : Instruction(std::move(raw_code), address), imm_(imm), reg_(reg) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+
+ public:
+  std::uint8_t imm_;
+  Register<std::uint8_t>& reg_;
+};
+
+// set u3, r8
+class SetU3R8 : public Instruction {
+ public:
+  SetU3R8(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
           std::uint8_t imm, Register<std::uint8_t>& reg)
       : Instruction(std::move(raw_code), address), imm_(imm), reg_(reg) {}
   std::string GetMnemonicString() override;

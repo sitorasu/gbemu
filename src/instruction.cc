@@ -303,9 +303,9 @@ std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
 }
 
 // 関数ポインタ配列Instruction::unprefixed_instructionsのコンパイル時初期化を行う
-constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
-  std::array<Instruction::DecodeFunction, 0xFF> result{};
-  for (int i = 0; i < 0xFF; i++) {
+constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
+  std::array<Instruction::DecodeFunction, 256> result{};
+  for (int i = 0; i < 256; i++) {
     result[i] = DecodeUnprefixedUnknown;
   }
 
@@ -474,9 +474,9 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitUnprefixed() {
 }
 
 // 関数ポインタ配列Instruction::Prefixed_instructionsのコンパイル時初期化を行う
-constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
-  std::array<Instruction::DecodeFunction, 0xFF> result{};
-  for (int i = 0; i < 0xFF; ++i) {
+constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
+  std::array<Instruction::DecodeFunction, 256> result{};
+  for (int i = 0; i < 256; ++i) {
     result[i] = DecodePrefixedUnknown;
   }
 
@@ -523,6 +523,10 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
         // opcode == 0b10yyyxxx AND xxx != 0b110
         opcode = (0b10 << 6) | (j << 3) | i;
         result[opcode] = DecodePrefixedU3R8<ResU3R8, 3, 0>;
+
+        // opcode == 0b11yyyxxx AND xxx != 0b110
+        opcode = (0b11 << 6) | (j << 3) | i;
+        result[opcode] = DecodePrefixedU3R8<SetU3R8, 3, 0>;
       }
     }
   }
@@ -532,9 +536,9 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
 
 }  // namespace
 
-std::array<Instruction::DecodeFunction, 0xFF>
+std::array<Instruction::DecodeFunction, 256>
     Instruction::unprefixed_instructions = InitUnprefixed();
-std::array<Instruction::DecodeFunction, 0xFF>
+std::array<Instruction::DecodeFunction, 256>
     Instruction::prefixed_instructions = InitPrefixed();
 
 std::shared_ptr<Instruction> Instruction::Decode(Cpu& cpu) {
@@ -2481,6 +2485,23 @@ unsigned ResU3R8::Execute(Cpu& cpu) {
   std::uint8_t reg_value = reg_.get();
   ASSERT(imm_ <= 7, "Invalid immediate for ResU3R8: %d", imm_);
   std::uint8_t result = reg_value & ~(1 << imm_);
+
+  reg_.set(result);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string SetU3R8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "set %d, %s", imm_, reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned SetU3R8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  ASSERT(imm_ <= 7, "Invalid immediate for ResU3R8: %d", imm_);
+  std::uint8_t result = reg_value | (1 << imm_);
 
   reg_.set(result);
   cpu.registers().pc.set(pc + length);
