@@ -62,7 +62,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
   - [ ] 07-jr,jp,call,ret,rst
   - [ ] 08-misc instrs
   - [x] 09-op r,r
-  - [ ] 10-bit ops
+  - [x] 10-bit ops
   - [ ] 11-op a,(hl)
 - [ ] CPUを実装してinstr_timingを通す（シリアル出力で確認）
 - [ ] PPUを実装してテスト用ROMを通す
