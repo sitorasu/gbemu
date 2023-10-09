@@ -515,10 +515,14 @@ constexpr std::array<Instruction::DecodeFunction, 0xFF> InitPrefixed() {
       opcode = (0b101 << 3) | i;
       result[opcode] = DecodePrefixedR8<SraR8, 0>;
 
-      // opcode == 0b01yyyxxx AND xxx != 0b110
       for (std::uint8_t j = 0; j < 8; j++) {
+        // opcode == 0b01yyyxxx AND xxx != 0b110
         opcode = (1 << 6) | (j << 3) | i;
         result[opcode] = DecodePrefixedU3R8<BitU3R8, 3, 0>;
+
+        // opcode == 0b10yyyxxx AND xxx != 0b110
+        opcode = (0b10 << 6) | (j << 3) | i;
+        result[opcode] = DecodePrefixedU3R8<ResU3R8, 3, 0>;
       }
     }
   }
@@ -2462,6 +2466,23 @@ unsigned BitU3R8::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.set_h_flag();
 
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string ResU3R8::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "res %d, %s", imm_, reg_.name().c_str());
+  return std::string(buf);
+}
+
+unsigned ResU3R8::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t reg_value = reg_.get();
+  ASSERT(imm_ <= 7, "Invalid immediate for ResU3R8: %d", imm_);
+  std::uint8_t result = reg_value & ~(1 << imm_);
+
+  reg_.set(result);
   cpu.registers().pc.set(pc + length);
   return 2;
 }
