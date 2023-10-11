@@ -481,6 +481,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
   }
 
   result[0x06] = DecodeNoOperand<RlcAhl>;
+  result[0x0E] = DecodeNoOperand<RrcAhl>;
 
   std::uint8_t opcode = 0;
   for (std::uint8_t i = 0; i < 8; i++) {
@@ -2531,6 +2532,39 @@ unsigned RlcAhl::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.reset_h_flag();
   if (value_bit7 == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.memory().Write8(hl, result);
+  cpu.registers().pc.set(pc + length);
+  return 4;
+}
+
+std::string RrcAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "rrc (hl)");
+  return std::string(buf);
+}
+
+unsigned RrcAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t value_bit0 = value & 1;
+  std::uint8_t result = (value >> 1) | (value_bit0 << 7);
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+
+  if (value_bit0 == 1) {
     cpu.registers().flags.set_c_flag();
   } else {
     cpu.registers().flags.reset_c_flag();

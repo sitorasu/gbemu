@@ -1121,6 +1121,16 @@ class RlcAhl : public Instruction {
   static const unsigned length{2};
 };
 
+// rrc (hl)
+class RrcAhl : public Instruction {
+ public:
+  RrcAhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xCB, 0x0E}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
