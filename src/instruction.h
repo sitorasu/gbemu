@@ -1171,6 +1171,16 @@ class SraAhl : public Instruction {
   static const unsigned length{2};
 };
 
+// swap (hl)
+class SwapAhl : public Instruction {
+ public:
+  SwapAhl(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xCB, 0x36}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_
