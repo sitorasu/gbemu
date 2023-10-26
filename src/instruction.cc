@@ -487,6 +487,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
   result[0x26] = DecodeNoOperand<SlaAhl>;
   result[0x2E] = DecodeNoOperand<SraAhl>;
   result[0x36] = DecodeNoOperand<SwapAhl>;
+  result[0x3E] = DecodeNoOperand<SrlAhl>;
 
   std::uint8_t opcode = 0;
   for (std::uint8_t i = 0; i < 8; i++) {
@@ -2728,6 +2729,38 @@ unsigned SwapAhl::Execute(Cpu& cpu) {
   cpu.registers().flags.reset_n_flag();
   cpu.registers().flags.reset_h_flag();
   cpu.registers().flags.reset_c_flag();
+
+  cpu.memory().Write8(hl, result);
+  cpu.registers().pc.set(pc + length);
+  return 4;
+}
+
+std::string SrlAhl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "srl (hl)");
+  return std::string(buf);
+}
+
+unsigned SrlAhl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = value >> 1;
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.reset_h_flag();
+
+  if ((value & 1) == 1) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
 
   cpu.memory().Write8(hl, result);
   cpu.registers().pc.set(pc + length);
