@@ -296,6 +296,20 @@ std::shared_ptr<Instruction> DecodePrefixedU3R8(Cpu& cpu) {
   return std::make_shared<InstType>(std::move(raw_code), pc, imm, reg);
 }
 
+// [prefix] [opcode]
+// 0xCB     0b**xxx***
+//            7...N..0
+//
+// オペコードの第Nビットから上位側3ビットが即値
+template <class InstType, unsigned N>
+std::shared_ptr<Instruction> DecodePrefixedU3(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::vector<std::uint8_t> raw_code = cpu.memory().ReadBytes(pc, 2);
+  std::uint8_t opcode = raw_code[1];
+  unsigned imm = ExtractBits(opcode, N, 3);
+  return std::make_shared<InstType>(std::move(raw_code), pc, imm);
+}
+
 std::shared_ptr<Instruction> DecodePrefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc + 1);
@@ -538,6 +552,12 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
         result[opcode] = DecodePrefixedU3R8<SetU3R8, 3, 0>;
       }
     }
+  }
+
+  for (std::uint8_t i = 0; i < 8; i++) {
+    // opcode == 0b01xxx110
+    opcode = (0b01 << 6) | (i << 3) | 0b110;
+    result[opcode] = DecodePrefixedU3<BitU3Ahl, 3>;
   }
 
   return result;
@@ -2765,6 +2785,30 @@ unsigned SrlAhl::Execute(Cpu& cpu) {
   cpu.memory().Write8(hl, result);
   cpu.registers().pc.set(pc + length);
   return 4;
+}
+
+std::string BitU3Ahl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "bit %d, (hl)", imm_);
+  return std::string(buf);
+}
+
+unsigned BitU3Ahl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = value & (1 << imm_);
+
+  if (result == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_n_flag();
+  cpu.registers().flags.set_h_flag();
+
+  cpu.registers().pc.set(pc + length);
+  return 3;
 }
 
 }  // namespace gbemu
