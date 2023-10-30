@@ -558,6 +558,10 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
     // opcode == 0b01xxx110
     opcode = (0b01 << 6) | (i << 3) | 0b110;
     result[opcode] = DecodePrefixedU3<BitU3Ahl, 3>;
+
+    // opcode == 0b10xxx110
+    opcode = (0b10 << 6) | (i << 3) | 0b110;
+    result[opcode] = DecodePrefixedU3<ResU3Ahl, 3>;
   }
 
   return result;
@@ -2809,6 +2813,23 @@ unsigned BitU3Ahl::Execute(Cpu& cpu) {
 
   cpu.registers().pc.set(pc + length);
   return 3;
+}
+
+std::string ResU3Ahl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "res %d, (hl)", imm_);
+  return std::string(buf);
+}
+
+unsigned ResU3Ahl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = value & ~(1 << imm_);
+
+  cpu.memory().Write8(hl, result);
+  cpu.registers().pc.set(pc + length);
+  return 4;
 }
 
 }  // namespace gbemu
