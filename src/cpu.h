@@ -35,6 +35,7 @@ class Cpu {
     void reset_h_flag() { data_ &= ~(1 << 5); }
     void reset_c_flag() { data_ &= ~(1 << 4); }
     bool GetFlagByIndex(unsigned i);
+    uint8_t get() override { return data_ & 0xF0; }
   };
 
   using Register8Pair = RegisterPair<std::uint8_t, std::uint16_t>;

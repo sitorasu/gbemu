@@ -53,7 +53,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
 - [x] テスト用ROM（cpu_instrs, instr_timing）を用意する
 - [x] MBC1を実装する（テスト用ROMがMBC1なので）
 - [ ] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
-  - [ ] 01-special
+  - [x] 01-special
   - [ ] 02-interrupts
   - [x] 03-op sp,hl
   - [x] 04-op r, imm
