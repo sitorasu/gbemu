@@ -1233,6 +1233,16 @@ class SetU3Ahl : public Instruction {
   std::uint8_t imm_;
 };
 
+// daa
+class Daa : public Instruction {
+ public:
+  Daa(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x27}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

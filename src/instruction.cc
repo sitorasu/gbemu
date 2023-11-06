@@ -335,6 +335,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
   result[0x1A] = DecodeNoOperand<LdRaAde>;
   result[0x1F] = DecodeNoOperand<Rra>;
   result[0x22] = DecodeNoOperand<LdAhliRa>;
+  result[0x27] = DecodeNoOperand<Daa>;
   result[0x2A] = DecodeNoOperand<LdRaAhli>;
   result[0x2F] = DecodeNoOperand<Cpl>;
   result[0x32] = DecodeNoOperand<LdAhldRa>;
@@ -2851,6 +2852,57 @@ unsigned SetU3Ahl::Execute(Cpu& cpu) {
   cpu.memory().Write8(hl, result);
   cpu.registers().pc.set(pc + length);
   return 4;
+}
+
+std::string Daa::GetMnemonicString() { return "daa"; }
+
+unsigned Daa::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t a = cpu.registers().a.get();
+  bool n_flag = cpu.registers().flags.n_flag();
+  bool c_flag = cpu.registers().flags.c_flag();
+  bool h_flag = cpu.registers().flags.h_flag();
+
+  if (!n_flag) {
+    // 加算の補正
+
+    // 上桁の補正
+    if (c_flag || (a > 0x99)) {
+      a += 0x60;
+      c_flag = true;
+    }
+    // 下桁の補正
+    if (h_flag || ((a & 0x0F) > 0x09)) {
+      a += 0x06;
+    }
+  } else {
+    // 減算の補正
+
+    // 上桁の補正
+    if (c_flag) {
+      a -= 0x60;
+    }
+    // 下桁の補正
+    if (h_flag) {
+      a -= 0x06;
+    }
+  }
+
+  if (a == 0) {
+    cpu.registers().flags.set_z_flag();
+  } else {
+    cpu.registers().flags.reset_z_flag();
+  }
+  cpu.registers().flags.reset_h_flag();
+  if (c_flag) {
+    cpu.registers().flags.set_c_flag();
+  } else {
+    cpu.registers().flags.reset_c_flag();
+  }
+
+  cpu.registers().a.set(a);
+  cpu.registers().pc.set(pc + length);
+  return 1;
 }
 
 }  // namespace gbemu
