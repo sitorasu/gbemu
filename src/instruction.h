@@ -1219,6 +1219,20 @@ class ResU3Ahl : public Instruction {
   std::uint8_t imm_;
 };
 
+// set u3, (hl)
+class SetU3Ahl : public Instruction {
+ public:
+  SetU3Ahl(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+           std::uint8_t imm)
+      : Instruction(std::move(raw_code), address), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{2};
+
+ public:
+  std::uint8_t imm_;
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

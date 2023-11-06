@@ -562,6 +562,10 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitPrefixed() {
     // opcode == 0b10xxx110
     opcode = (0b10 << 6) | (i << 3) | 0b110;
     result[opcode] = DecodePrefixedU3<ResU3Ahl, 3>;
+
+    // opcode == 0b11xxx110
+    opcode = (0b11 << 6) | (i << 3) | 0b110;
+    result[opcode] = DecodePrefixedU3<SetU3Ahl, 3>;
   }
 
   return result;
@@ -2826,6 +2830,23 @@ unsigned ResU3Ahl::Execute(Cpu& cpu) {
   std::uint16_t hl = cpu.registers().hl.get();
   std::uint8_t value = cpu.memory().Read8(hl);
   std::uint8_t result = value & ~(1 << imm_);
+
+  cpu.memory().Write8(hl, result);
+  cpu.registers().pc.set(pc + length);
+  return 4;
+}
+
+std::string SetU3Ahl::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "set %d, (hl)", imm_);
+  return std::string(buf);
+}
+
+unsigned SetU3Ahl::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t hl = cpu.registers().hl.get();
+  std::uint8_t value = cpu.memory().Read8(hl);
+  std::uint8_t result = value | (1 << imm_);
 
   cpu.memory().Write8(hl, result);
   cpu.registers().pc.set(pc + length);
