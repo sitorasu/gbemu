@@ -1243,6 +1243,26 @@ class Daa : public Instruction {
   static const unsigned length{1};
 };
 
+// ldh a, (FF00+c)
+class LdhRaAc : public Instruction {
+ public:
+  LdhRaAc(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xF2}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
+// ldh (FF00+c), a
+class LdhAcRa : public Instruction {
+ public:
+  LdhAcRa(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xE2}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

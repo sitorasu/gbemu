@@ -361,12 +361,14 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
   result[0xD6] = DecodeImm8<SubRaU8>;
   result[0xDE] = DecodeImm8<SbcRaU8>;
   result[0xE0] = DecodeImm8<LdhA8Ra>;
+  result[0xE2] = DecodeNoOperand<LdhAcRa>;
   result[0xE6] = DecodeImm8<AndRaU8>;
   result[0xE8] = DecodeImm8<AddRspS8>;
   result[0xE9] = DecodeNoOperand<JpRhl>;
   result[0xEA] = DecodeImm16<LdA16Ra>;
   result[0xEE] = DecodeImm8<XorRaU8>;
   result[0xF0] = DecodeImm8<LdhRaA8>;
+  result[0xF2] = DecodeNoOperand<LdhRaAc>;
   result[0xF3] = DecodeNoOperand<Di>;
   result[0xF6] = DecodeImm8<OrRaU8>;
   result[0xF8] = DecodeImm8<LdRhlRspS8>;
@@ -2903,6 +2905,28 @@ unsigned Daa::Execute(Cpu& cpu) {
   cpu.registers().a.set(a);
   cpu.registers().pc.set(pc + length);
   return 1;
+}
+
+std::string LdhRaAc::GetMnemonicString() { return "ldh a, (FF00+c)"; }
+
+unsigned LdhRaAc::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t c = cpu.registers().c.get();
+  std::uint8_t value = cpu.memory().Read8(0xFF00 + c);
+  cpu.registers().a.set(value);
+  cpu.registers().pc.set(pc + length);
+  return 2;
+}
+
+std::string LdhAcRa::GetMnemonicString() { return "ldh (FF00+c), a"; }
+
+unsigned LdhAcRa::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint8_t c = cpu.registers().c.get();
+  std::uint8_t a = cpu.registers().a.get();
+  cpu.memory().Write8(0xFF00 + c, a);
+  cpu.registers().pc.set(pc + length);
+  return 2;
 }
 
 }  // namespace gbemu
