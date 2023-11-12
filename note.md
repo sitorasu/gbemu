@@ -60,7 +60,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
   - [x] 05-op rp
   - [x] 06-op ld r,r
   - [ ] 07-jr,jp,call,ret,rst
-  - [ ] 08-misc instrs
+  - [x] 08-misc instrs
   - [x] 09-op r,r
   - [x] 10-bit ops
   - [x] 11-op a,(hl)

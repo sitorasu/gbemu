@@ -359,6 +359,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
   result[0xCD] = DecodeImm16<CallU16>;
   result[0xCE] = DecodeImm8<AdcRaU8>;
   result[0xD6] = DecodeImm8<SubRaU8>;
+  result[0xD9] = DecodeNoOperand<Reti>;
   result[0xDE] = DecodeImm8<SbcRaU8>;
   result[0xE0] = DecodeImm8<LdhA8Ra>;
   result[0xE2] = DecodeNoOperand<LdhAcRa>;
@@ -2927,6 +2928,15 @@ unsigned LdhAcRa::Execute(Cpu& cpu) {
   cpu.memory().Write8(0xFF00 + c, a);
   cpu.registers().pc.set(pc + length);
   return 2;
+}
+
+std::string Reti::GetMnemonicString() { return "reti"; }
+
+unsigned Reti::Execute(Cpu& cpu) {
+  std::uint16_t address = Pop(cpu);
+  cpu.registers().pc.set(address);
+  cpu.registers().ime = true;
+  return 4;
 }
 
 }  // namespace gbemu
