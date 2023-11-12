@@ -59,7 +59,7 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
   - [x] 04-op r, imm
   - [x] 05-op rp
   - [x] 06-op ld r,r
-  - [ ] 07-jr,jp,call,ret,rst
+  - [x] 07-jr,jp,call,ret,rst
   - [x] 08-misc instrs
   - [x] 09-op r,r
   - [x] 10-bit ops
@@ -76,3 +76,6 @@ g++ -std=c++17 -Wall -Wextra src/*.cc
   - マクロは名前空間の影響を受けるか？
 - [ ] コマンドライン引数を順不同にする
 - [ ] memory.hという名前はよくなかったかも（標準ライブラリと被る）
+
+## 教訓
+* オペコードの第何ビットがレジスタの番号みたいな解析はDecodeXXXみたいな関数の中でやるより各命令のクラスのコンストラクタでやるべきだったかも。そうすればDecodeXXXみたいな関数をたくさん定義することはなくなって、命令ごとに固有の処理が命令ごとのクラスに集約される。

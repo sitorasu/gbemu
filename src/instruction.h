@@ -1273,6 +1273,21 @@ class Reti : public Instruction {
   static const unsigned length{1};
 };
 
+// rst n
+class Rst : public Instruction {
+ public:
+  Rst(std::vector<std::uint8_t>&& raw_code, std::uint16_t address,
+      std::uint8_t imm)
+      : Instruction(std::move(raw_code), address), imm_(imm) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+
+ public:
+  std::uint8_t
+      imm_;  // opcodeの第3-5ビット。この値を3ビット左シフトしてジャンプ先アドレスを得る。
+};
+
 }  // namespace gbemu
 
 #endif  // INSTRUCTION_H_

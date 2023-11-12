@@ -432,6 +432,10 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
       opcode = (0b10100 << 3) | i;
       result[opcode] = DecodeR8<AndRaR8, 0>;
     }
+
+    // opcode == 0b11xxx111
+    opcode = (0b11 << 6) | (i << 3) | 0b111;
+    result[opcode] = DecodePrefixedU3<Rst, 3>;
   }
 
   // opcode == 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
@@ -2936,6 +2940,20 @@ unsigned Reti::Execute(Cpu& cpu) {
   std::uint16_t address = Pop(cpu);
   cpu.registers().pc.set(address);
   cpu.registers().ime = true;
+  return 4;
+}
+
+std::string Rst::GetMnemonicString() {
+  char buf[16];
+  std::sprintf(buf, "bit 0x%02X", imm_ << 3);
+  return std::string(buf);
+}
+
+unsigned Rst::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::uint16_t address = imm_ << 3;
+  Push(cpu, pc + length);
+  cpu.registers().pc.set(address);
   return 4;
 }
 
