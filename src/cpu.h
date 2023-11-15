@@ -64,7 +64,8 @@ class Cpu {
   };
 
  public:
-  Cpu(Memory& memory) : registers_(), memory_(memory) {
+  Cpu(Memory& memory, Interrupt& interrupt)
+      : registers_(), memory_(memory), interrupt_(interrupt) {
     registers_.pc.set(0x100);
   }
   // CPUを1命令分進め、経過したクロック数（単位：M-cycle）を返す。
@@ -76,6 +77,7 @@ class Cpu {
  private:
   Registers registers_;
   Memory& memory_;
+  Interrupt& interrupt_;
 };
 
 }  // namespace gbemu

@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
   Cartridge cartridge(std::move(rom));
   Interrupt interrupt;
   Memory memory(cartridge, interrupt);
-  Cpu cpu(memory);
+  Cpu cpu(memory, interrupt);
   for (;;) {
     cpu.Step();
   }

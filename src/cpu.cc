@@ -7,6 +7,7 @@
 
 #include "command_line.h"
 #include "instruction.h"
+#include "interrupt.h"
 #include "memory.h"
 #include "utils.h"
 
@@ -114,8 +115,20 @@ unsigned Cpu::Step() {
     PrintInstruction(inst);
   }
 
+  // imeフラグが立っているなら割り込みを確認
   if (registers_.ime) {
-    // 割り込み要求をチェック
+    Interrupt::InterruptSource source = interrupt_.GetRequestedInterrupt();
+    if (source != Interrupt::kNone) {
+      std::uint16_t address = Interrupt::GetInterruptHandlerAddress(source);
+      registers_.ime = false;
+      interrupt_.ResetIfBit(source);
+      std::uint16_t pc = registers_.pc.get();
+      std::uint16_t sp = registers_.sp.get();
+      memory_.Write16(sp - 2, pc);
+      registers_.sp.set(sp - 2);
+      registers_.pc.set(address);
+      return 5;
+    }
   }
 
   unsigned mcycles = inst->Execute(*this);

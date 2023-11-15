@@ -32,4 +32,27 @@ Interrupt::InterruptSource Interrupt::GetRequestedInterrupt() {
   return source;
 }
 
+void Interrupt::SetIfBit(InterruptSource source) {
+  ASSERT(source > 0 && source < kInterruptSourceNum,
+         "Invalid interrupt source: %d", source);
+  if_ |= 1 << source;
+}
+
+void Interrupt::ResetIfBit(InterruptSource source) {
+  ASSERT(source > 0 && source < kInterruptSourceNum,
+         "Invalid interrupt source: %d", source);
+  if_ &= ~(1 << source);
+}
+
+void Interrupt::SetIeBit(InterruptSource source) {
+  ASSERT(source > 0 && source < kInterruptSourceNum,
+         "Invalid interrupt source: %d", source);
+  ie_ |= 1 << source;
+}
+
+void Interrupt::ResetIeBit(InterruptSource source) {
+  ASSERT(source > 0 && source < kInterruptSourceNum,
+         "Invalid interrupt source: %d", source);
+  ie_ &= ~(1 << source);
+}
 }  // namespace gbemu

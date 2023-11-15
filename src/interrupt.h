@@ -33,6 +33,10 @@ class Interrupt {
   std::uint8_t GetIf() { return if_; };
   void SetIe(std::uint8_t value) { ie_ = value & 0x1F; };
   std::uint8_t GetIe() { return ie_; };
+  void SetIfBit(InterruptSource source);
+  void ResetIfBit(InterruptSource source);
+  void SetIeBit(InterruptSource source);
+  void ResetIeBit(InterruptSource source);
 
  private:
   std::uint8_t if_;  // Interrupt flag (IF)
