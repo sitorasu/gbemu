@@ -375,6 +375,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
   result[0xF8] = DecodeImm8<LdRhlRspS8>;
   result[0xF9] = DecodeNoOperand<LdRspRhl>;
   result[0xFA] = DecodeImm16<LdRaA16>;
+  result[0xFB] = DecodeNoOperand<Ei>;
   result[0xFE] = DecodeImm8<CpRaU8>;
 
   std::uint8_t opcode = 0;
@@ -2955,6 +2956,15 @@ unsigned Rst::Execute(Cpu& cpu) {
   Push(cpu, pc + length);
   cpu.registers().pc.set(address);
   return 4;
+}
+
+std::string Ei::GetMnemonicString() { return "ei"; }
+
+unsigned Ei::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  cpu.registers().pc.set(pc + length);
+  cpu.registers().ime = true;
+  return 1;
 }
 
 }  // namespace gbemu

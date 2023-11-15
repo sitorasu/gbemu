@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "cartridge.h"
+#include "interrupt.h"
 
 namespace gbemu {
 
@@ -20,8 +21,9 @@ namespace gbemu {
 //   std::uint8_t result = memory.Read8(address);
 class Memory {
  public:
-  Memory(Cartridge& cartridge)
+  Memory(Cartridge& cartridge, Interrupt& interrupt)
       : cartridge_(cartridge),
+        interrupt_(interrupt),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
@@ -36,6 +38,7 @@ class Memory {
   constexpr static auto kInternalRamSize = 8 * 1024;
   constexpr static auto kHRamSize = 127;
   Cartridge& cartridge_;
+  Interrupt& interrupt_;
 
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;

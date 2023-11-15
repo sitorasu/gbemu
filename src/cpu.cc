@@ -92,21 +92,30 @@ std::string Join(const std::vector<std::uint8_t>& v) {
   str.pop_back();
   return str;
 }
+
+// 命令を標準出力する
+// 表示例: `$0637 C3 30 04   jp 0x0430`
+void PrintInstruction(std::shared_ptr<Instruction> inst) {
+  char buf[64];
+  std::string raw_code = Join(inst->raw_code());
+  std::string mnemonic = inst->GetMnemonicString();
+  std::sprintf(buf, "$%04X %s\t%s", inst->address(), raw_code.c_str(),
+               mnemonic.c_str());
+  std::printf("%s\n", buf);
+}
+
 }  // namespace
 
 unsigned Cpu::Step() {
   std::shared_ptr<Instruction> inst = Instruction::Decode(*this);
 
   // デバッグモードなら命令の情報を表示
-  // 表示例
-  // $0637 C3 30 04   jp 0x0430
   if (options.debug()) {
-    char buf[64];
-    std::string raw_code = Join(inst->raw_code());
-    std::string mnemonic = inst->GetMnemonicString();
-    std::sprintf(buf, "$%04X %s\t%s", inst->address(), raw_code.c_str(),
-                 mnemonic.c_str());
-    std::printf("%s\n", buf);
+    PrintInstruction(inst);
+  }
+
+  if (registers_.ime) {
+    // 割り込み要求をチェック
   }
 
   unsigned mcycles = inst->Execute(*this);

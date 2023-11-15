@@ -8,6 +8,7 @@
 #include "cartridge.h"
 #include "command_line.h"
 #include "cpu.h"
+#include "interrupt.h"
 #include "memory.h"
 #include "utils.h"
 
@@ -50,7 +51,8 @@ int main(int argc, char* argv[]) {
   std::vector<std::uint8_t> rom(LoadRom(options.filename()));
 
   Cartridge cartridge(std::move(rom));
-  Memory memory(cartridge);
+  Interrupt interrupt;
+  Memory memory(cartridge, interrupt);
   Cpu cpu(memory);
   for (;;) {
     cpu.Step();

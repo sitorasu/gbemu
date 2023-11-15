@@ -1,5 +1,5 @@
-#ifndef REGISTER_H_
-#define REGISTER_H_
+#ifndef GBEMU_REGISTER_H_
+#define GBEMU_REGISTER_H_
 
 #include <string>
 
@@ -67,4 +67,4 @@ class RegisterPair : public Register<SuperUInt> {
 
 }  // namespace gbemu
 
-#endif  // REGISTER_H_
+#endif  // GBEMU_REGISTER_H_

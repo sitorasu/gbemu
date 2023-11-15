@@ -1,5 +1,5 @@
-#ifndef INSTRUCTION_H_
-#define INSTRUCTION_H_
+#ifndef GBEMU_INSTRUCTION_H_
+#define GBEMU_INSTRUCTION_H_
 
 #include <array>
 #include <cstdint>
@@ -1288,6 +1288,16 @@ class Rst : public Instruction {
       imm_;  // opcodeの第3-5ビット。この値を3ビット左シフトしてジャンプ先アドレスを得る。
 };
 
+// ei
+class Ei : public Instruction {
+ public:
+  Ei(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0xFB}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
-#endif  // INSTRUCTION_H_
+#endif  // GBEMU_INSTRUCTION_H_

@@ -1,5 +1,5 @@
-#ifndef COMMAND_LINE_H_
-#define COMMAND_LINE_H_
+#ifndef GBEMU_COMMAND_LINE_H_
+#define GBEMU_COMMAND_LINE_H_
 
 #include <string>
 
@@ -20,4 +20,4 @@ extern Options options;
 
 }  // namespace gbemu
 
-#endif  // COMMAND_LINE_H_
+#endif  // GBEMU_COMMAND_LINE_H_

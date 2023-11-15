@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "command_line.h"
+#include "interrupt.h"
 #include "utils.h"
 
 namespace gbemu {
@@ -79,9 +80,6 @@ class IORegisters {
 
 IORegisters io_regs;
 
-// ダミーのIEレジスタ
-std::uint8_t ie;
-
 // ダミーのVRAM
 std::vector<std::uint8_t> vram(1024 * 8);
 
@@ -113,6 +111,9 @@ uint8_t Memory::Read8(std::uint16_t address) {
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタからの読み出し
     // WARN("Read from I/O register is not implemented.");
+    if (address == 0xFF0F) {
+      return interrupt_.GetIf();
+    }
     return io_regs.Read(address);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
@@ -122,7 +123,7 @@ uint8_t Memory::Read8(std::uint16_t address) {
     ASSERT(address == 0xFFFF, "Read from unknown address: %d",
            static_cast<int>(address));
     // WARN("Read from register IE is not implemented.");
-    return ie;
+    return interrupt_.GetIe();
   }
 }
 
@@ -167,7 +168,11 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
     // WARN("Write to I/O register is not implemented.");
-    io_regs.Write(address, value);
+    if (address == 0xFF0F) {
+      interrupt_.SetIf(value);
+    } else {
+      io_regs.Write(address, value);
+    }
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
     h_ram_.at(address & 0x007F) = value;
@@ -176,7 +181,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     ASSERT(address == 0xFFFF, "Write to unknown address: %d",
            static_cast<int>(address));
     // WARN("Write to register IE is not implemented.");
-    ie = value;
+    interrupt_.SetIe(value);
   }
 }
 
