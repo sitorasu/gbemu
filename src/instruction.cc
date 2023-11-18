@@ -967,7 +967,7 @@ unsigned LdAhlR8::Execute(Cpu& cpu) {
   std::uint16_t address = cpu.registers().hl.get();
   cpu.memory().Write8(address, reg_.get());
   cpu.registers().pc.set(pc + length);
-  return 1;
+  return 2;
 }
 
 std::string IncR8::GetMnemonicString() {
