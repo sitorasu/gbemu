@@ -10,6 +10,7 @@
 #include "cpu.h"
 #include "interrupt.h"
 #include "memory.h"
+#include "timer.h"
 #include "utils.h"
 
 using namespace gbemu;
@@ -52,10 +53,12 @@ int main(int argc, char* argv[]) {
 
   Cartridge cartridge(std::move(rom));
   Interrupt interrupt;
-  Memory memory(cartridge, interrupt);
+  Timer timer(interrupt);
+  Memory memory(cartridge, interrupt, timer);
   Cpu cpu(memory, interrupt);
   for (;;) {
-    cpu.Step();
+    unsigned mcycle = cpu.Step();
+    timer.step(mcycle * 4);
   }
 
   return 0;

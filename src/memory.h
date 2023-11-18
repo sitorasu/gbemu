@@ -6,6 +6,7 @@
 
 #include "cartridge.h"
 #include "interrupt.h"
+#include "timer.h"
 
 namespace gbemu {
 
@@ -21,9 +22,10 @@ namespace gbemu {
 //   std::uint8_t result = memory.Read8(address);
 class Memory {
  public:
-  Memory(Cartridge& cartridge, Interrupt& interrupt)
+  Memory(Cartridge& cartridge, Interrupt& interrupt, Timer& timer)
       : cartridge_(cartridge),
         interrupt_(interrupt),
+        timer_(timer),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
@@ -41,6 +43,7 @@ class Memory {
   constexpr static auto kHRamSize = 127;
   Cartridge& cartridge_;
   Interrupt& interrupt_;
+  Timer& timer_;
 
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;

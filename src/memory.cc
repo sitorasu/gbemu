@@ -86,6 +86,18 @@ std::vector<std::uint8_t> vram(1024 * 8);
 
 void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
   switch (address) {
+    case 0xFF04:
+      timer_.reset_div();
+      break;
+    case 0xFF05:
+      timer_.set_tima(value);
+      break;
+    case 0xFF06:
+      timer_.set_tma(value);
+      break;
+    case 0xFF07:
+      timer_.set_tac(value);
+      break;
     case 0xFF0F:
       interrupt_.SetIf(value);
       break;
@@ -97,6 +109,14 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
 
 std::uint8_t Memory::ReadIORegister(std::uint16_t address) {
   switch (address) {
+    case 0xFF04:
+      return timer_.div();
+    case 0xFF05:
+      return timer_.tima();
+    case 0xFF06:
+      return timer_.tma();
+    case 0xFF07:
+      return timer_.tac();
     case 0xFF0F:
       return interrupt_.GetIf();
     default:
