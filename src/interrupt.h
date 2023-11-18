@@ -5,20 +5,20 @@
 
 namespace gbemu {
 
+// 割り込み要因の一覧。
+// 列挙子の値はIEおよびIFのビット位置に対応する。
+enum class InterruptSource {
+  kNone = -1,
+  kVblank,
+  kStat,
+  kTimer,
+  kSerial,
+  kJoypad,
+  kInterruptSourceNum,
+};
+
 class Interrupt {
  public:
-  // 割り込み要因の一覧。
-  // 列挙子の値はIEおよびIFのビット位置に対応する。
-  enum InterruptSource {
-    kNone = -1,
-    kVblank,
-    kStat,
-    kTimer,
-    kSerial,
-    kJoypad,
-    kInterruptSourceNum,
-  };
-
   Interrupt() : if_(0), ie_(0) {}
 
   // 割り込み要因に対応するハンドラのアドレスを得る

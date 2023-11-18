@@ -117,8 +117,8 @@ unsigned Cpu::Step() {
 
   // imeフラグが立っているなら割り込みを確認
   if (registers_.ime) {
-    Interrupt::InterruptSource source = interrupt_.GetRequestedInterrupt();
-    if (source != Interrupt::kNone) {
+    InterruptSource source = interrupt_.GetRequestedInterrupt();
+    if (source != InterruptSource::kNone) {
       std::uint16_t address = Interrupt::GetInterruptHandlerAddress(source);
       registers_.ime = false;
       interrupt_.ResetIfBit(source);

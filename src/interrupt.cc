@@ -6,53 +6,54 @@
 
 namespace gbemu {
 
-std::uint16_t Interrupt::GetInterruptHandlerAddress(
-    Interrupt::InterruptSource source) {
+std::uint16_t Interrupt::GetInterruptHandlerAddress(InterruptSource source) {
   switch (source) {
-    case kVblank:
+    case InterruptSource::kVblank:
       return 0x40;
-    case kStat:
+    case InterruptSource::kStat:
       return 0x48;
-    case kTimer:
+    case InterruptSource::kTimer:
       return 0x50;
-    case kSerial:
+    case InterruptSource::kSerial:
       return 0x58;
-    case kJoypad:
+    case InterruptSource::kJoypad:
       return 0x60;
     default:
       UNREACHABLE("Unknown interrupt source: %d", source);
   }
 }
 
-Interrupt::InterruptSource Interrupt::GetRequestedInterrupt() {
+InterruptSource Interrupt::GetRequestedInterrupt() {
   std::uint8_t allowed = if_ & ie_;
   int min_set_bit_pos = __builtin_ffs(allowed) - 1;
+  int interrupt_source_max =
+      static_cast<int>(InterruptSource::kInterruptSourceNum);
+  int interrupt_source_min = static_cast<int>(InterruptSource::kNone);
+  ASSERT(min_set_bit_pos >= interrupt_source_min &&
+             min_set_bit_pos < interrupt_source_max,
+         "Invalid interrupt request: %d", min_set_bit_pos);
   InterruptSource source = static_cast<InterruptSource>(min_set_bit_pos);
-  ASSERT(source < kInterruptSourceNum, "Invalid interrupt source: %d", source);
   return source;
 }
 
 void Interrupt::SetIfBit(InterruptSource source) {
-  ASSERT(source > 0 && source < kInterruptSourceNum,
-         "Invalid interrupt source: %d", source);
-  if_ |= 1 << source;
+  int bit_pos = static_cast<int>(source);
+  if_ |= 1 << bit_pos;
 }
 
 void Interrupt::ResetIfBit(InterruptSource source) {
-  ASSERT(source > 0 && source < kInterruptSourceNum,
-         "Invalid interrupt source: %d", source);
-  if_ &= ~(1 << source);
+  int bit_pos = static_cast<int>(source);
+  if_ &= ~(1 << bit_pos);
 }
 
 void Interrupt::SetIeBit(InterruptSource source) {
-  ASSERT(source > 0 && source < kInterruptSourceNum,
-         "Invalid interrupt source: %d", source);
-  ie_ |= 1 << source;
+  int bit_pos = static_cast<int>(source);
+  ie_ |= 1 << bit_pos;
 }
 
 void Interrupt::ResetIeBit(InterruptSource source) {
-  ASSERT(source > 0 && source < kInterruptSourceNum,
-         "Invalid interrupt source: %d", source);
-  ie_ &= ~(1 << source);
+  int bit_pos = static_cast<int>(source);
+  ie_ &= ~(1 << bit_pos);
 }
+
 }  // namespace gbemu
