@@ -28,12 +28,20 @@ class IORegisters {
  private:
   std::uint8_t& GetRegAt(std::uint16_t address) {
     switch (address) {
+      case 0xFF00:
+        return joyp_;
       case 0xFF01:
         return sb_;
       case 0xFF02:
         return sc_;
-      case 0xFF07:
-        return tac_;
+      case 0xFF11:
+        return nr11_;
+      case 0xFF12:
+        return nr12_;
+      case 0xFF13:
+        return nr13_;
+      case 0xFF14:
+        return nr14_;
       case 0xFF24:
         return nr50_;
       case 0xFF25:
@@ -50,31 +58,26 @@ class IORegisters {
         return ly_;
       case 0xFF47:
         return bgp_;
-      case 0xFF4F:
-        return vbk_;
-      case 0xFF68:
-        return bcps_bgpi_;
-      case 0xFF69:
-        return bcpd_bgpd_;
       default:
         UNREACHABLE("Unknown I/O register: $%04X", address);
     }
   }
 
-  std::uint8_t sb_{};         // $FF01
-  std::uint8_t sc_{};         // $FF02
-  std::uint8_t tac_{};        // $FF07
-  std::uint8_t nr50_{};       // $FF24
-  std::uint8_t nr51_{};       // $FF25
-  std::uint8_t nr52_{};       // $FF26
-  std::uint8_t lcdc_{};       // $FF40
-  std::uint8_t scy_{};        // $FF42
-  std::uint8_t scx_{};        // $FF43
-  std::uint8_t ly_{0x90};     // $FF44 VBlankの先頭で固定
-  std::uint8_t bgp_{};        // $FF47
-  std::uint8_t vbk_{};        // $FF4F
-  std::uint8_t bcps_bgpi_{};  // $FF68
-  std::uint8_t bcpd_bgpd_{};  // $FF69
+  std::uint8_t joyp_{};    // $FF00
+  std::uint8_t sb_{};      // $FF01
+  std::uint8_t sc_{};      // $FF02
+  std::uint8_t nr11_{};    // $FF11
+  std::uint8_t nr12_{};    // $FF12
+  std::uint8_t nr13_{};    // $FF13
+  std::uint8_t nr14_{};    // $FF14
+  std::uint8_t nr50_{};    // $FF24
+  std::uint8_t nr51_{};    // $FF25
+  std::uint8_t nr52_{};    // $FF26
+  std::uint8_t lcdc_{};    // $FF40
+  std::uint8_t scy_{};     // $FF42
+  std::uint8_t scx_{};     // $FF43
+  std::uint8_t ly_{0x90};  // $FF44 VBlankの先頭で固定
+  std::uint8_t bgp_{};     // $FF47
 };
 
 IORegisters io_regs;
@@ -85,6 +88,10 @@ std::vector<std::uint8_t> vram(1024 * 8);
 }  // namespace
 
 void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
+  // CGB固有のレジスタへのアクセスはとりあえず無効とする
+  if (address >= 0xFF4D) {
+    return;
+  }
   switch (address) {
     case 0xFF04:
       timer_.reset_div();
@@ -108,6 +115,11 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
 }
 
 std::uint8_t Memory::ReadIORegister(std::uint16_t address) {
+  // CGB固有のレジスタへのアクセスはとりあえず無効とする
+  if (address >= 0xFF4D) {
+    // 0xFFを返さないとcpu_instrsで実行環境がCGBと判定されてstopが実行されてしまう
+    return 0xFF;
+  }
   switch (address) {
     case 0xFF04:
       return timer_.div();
