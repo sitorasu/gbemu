@@ -18,6 +18,8 @@ class IORegisters {
   std::uint8_t Read(std::uint16_t address) { return GetRegAt(address); }
   void Write(std::uint16_t address, std::uint8_t value) {
     GetRegAt(address) = value;
+    // --debugフラグがない場合に限り、シリアル出力を標準出力に接続
+    // --debugフラグがあるときは接続しない（デバッグ出力と混ざってぐちゃぐちゃになるので）
     if (!options.debug() && address == 0xFF02 && value == 0x81) {
       std::cout << static_cast<unsigned char>(sb_) << std::flush;
     }
@@ -32,8 +34,6 @@ class IORegisters {
         return sc_;
       case 0xFF07:
         return tac_;
-      case 0xFF0F:
-        return if_;
       case 0xFF24:
         return nr50_;
       case 0xFF25:
@@ -64,7 +64,6 @@ class IORegisters {
   std::uint8_t sb_{};         // $FF01
   std::uint8_t sc_{};         // $FF02
   std::uint8_t tac_{};        // $FF07
-  std::uint8_t if_{};         // $FF0F
   std::uint8_t nr50_{};       // $FF24
   std::uint8_t nr51_{};       // $FF25
   std::uint8_t nr52_{};       // $FF26
@@ -84,6 +83,26 @@ IORegisters io_regs;
 std::vector<std::uint8_t> vram(1024 * 8);
 
 }  // namespace
+
+void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
+  switch (address) {
+    case 0xFF0F:
+      interrupt_.SetIf(value);
+      break;
+    default:
+      io_regs.Write(address, value);
+      break;
+  }
+}
+
+std::uint8_t Memory::ReadIORegister(std::uint16_t address) {
+  switch (address) {
+    case 0xFF0F:
+      return interrupt_.GetIf();
+    default:
+      return io_regs.Read(address);
+  }
+}
 
 uint8_t Memory::Read8(std::uint16_t address) {
   if (InRange(address, 0, 0x8000)) {
@@ -111,10 +130,7 @@ uint8_t Memory::Read8(std::uint16_t address) {
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタからの読み出し
     // WARN("Read from I/O register is not implemented.");
-    if (address == 0xFF0F) {
-      return interrupt_.GetIf();
-    }
-    return io_regs.Read(address);
+    return ReadIORegister(address);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
     return h_ram_.at(address & 0x007F);
@@ -168,11 +184,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
     // WARN("Write to I/O register is not implemented.");
-    if (address == 0xFF0F) {
-      interrupt_.SetIf(value);
-    } else {
-      io_regs.Write(address, value);
-    }
+    WriteIORegister(address, value);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
     h_ram_.at(address & 0x007F) = value;

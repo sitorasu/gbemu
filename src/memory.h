@@ -34,7 +34,9 @@ class Memory {
   void Write16(std::uint16_t address, std::uint16_t value);
 
  private:
-  // ROM、内蔵RAM、PPUなどへの参照を持っていると良さそう
+  std::uint8_t ReadIORegister(std::uint16_t address);
+  void WriteIORegister(std::uint16_t address, std::uint8_t value);
+
   constexpr static auto kInternalRamSize = 8 * 1024;
   constexpr static auto kHRamSize = 127;
   Cartridge& cartridge_;
