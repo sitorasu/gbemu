@@ -1298,6 +1298,16 @@ class Ei : public Instruction {
   static const unsigned length{1};
 };
 
+// halt
+class Halt : public Instruction {
+ public:
+  Halt(std::uint16_t address)
+      : Instruction(std::vector<std::uint8_t>{0x76}, address) {}
+  std::string GetMnemonicString() override;
+  unsigned Execute(Cpu& cpu) override;
+  static const unsigned length{1};
+};
+
 }  // namespace gbemu
 
 #endif  // GBEMU_INSTRUCTION_H_

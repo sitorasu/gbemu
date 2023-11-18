@@ -108,11 +108,17 @@ void PrintInstruction(std::shared_ptr<Instruction> inst) {
 }  // namespace
 
 unsigned Cpu::Step() {
-  std::shared_ptr<Instruction> inst = Instruction::Decode(*this);
-
-  // デバッグモードなら命令の情報を表示
-  if (options.debug()) {
-    PrintInstruction(inst);
+  // haltなら割り込みを確認。
+  // haltバグは未実装。
+  if (is_halted_) {
+    InterruptSource source = interrupt_.GetRequestedInterrupt();
+    // 割り込みが来ていればhaltを解除し通常の処理を再開。
+    // 割り込みが来ていなければ何もせず1サイクル過ごす。
+    if (source != InterruptSource::kNone) {
+      is_halted_ = false;
+    } else {
+      return 1;
+    }
   }
 
   // imeフラグが立っているなら割り込みを確認
@@ -129,6 +135,13 @@ unsigned Cpu::Step() {
       registers_.pc.set(address);
       return 5;
     }
+  }
+
+  std::shared_ptr<Instruction> inst = Instruction::Decode(*this);
+
+  // デバッグモードなら命令の情報を表示
+  if (options.debug()) {
+    PrintInstruction(inst);
   }
 
   unsigned mcycles = inst->Execute(*this);

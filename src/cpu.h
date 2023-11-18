@@ -60,7 +60,7 @@ class Cpu {
     Register8Pair hl{h, l};
     SingleRegister<std::uint16_t> sp{"sp"};
     SingleRegister<std::uint16_t> pc{"pc"};
-    bool ime{false};  // BootROM実行後の値はどうなっている？
+    bool ime{false};
   };
 
  public:
@@ -68,8 +68,12 @@ class Cpu {
       : registers_(), memory_(memory), interrupt_(interrupt) {
     registers_.pc.set(0x100);
   }
+
   // CPUを1命令分進め、経過したクロック数（単位：M-cycle）を返す。
   unsigned Step();
+
+  // haltする
+  void Halt() { is_halted_ = true; }
 
   Registers& registers() { return registers_; }
   Memory& memory() { return memory_; }
@@ -78,6 +82,8 @@ class Cpu {
   Registers registers_;
   Memory& memory_;
   Interrupt& interrupt_;
+
+  bool is_halted_{false};
 };
 
 }  // namespace gbemu

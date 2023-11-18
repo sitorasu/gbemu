@@ -345,6 +345,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
   result[0x37] = DecodeNoOperand<Scf>;
   result[0x3A] = DecodeNoOperand<LdRaAhld>;
   result[0x3F] = DecodeNoOperand<Ccf>;
+  result[0x76] = DecodeNoOperand<Halt>;
   result[0x86] = DecodeNoOperand<AddRaAhl>;
   result[0x8E] = DecodeNoOperand<AdcRaAhl>;
   result[0x96] = DecodeNoOperand<SubRaAhl>;
@@ -2964,6 +2965,15 @@ unsigned Ei::Execute(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   cpu.registers().pc.set(pc + length);
   cpu.registers().ime = true;
+  return 1;
+}
+
+std::string Halt::GetMnemonicString() { return "halt"; }
+
+unsigned Halt::Execute(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  cpu.registers().pc.set(pc + length);
+  cpu.Halt();
   return 1;
 }
 
