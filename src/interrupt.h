@@ -27,12 +27,12 @@ class Interrupt {
   // 現在対処すべき割り込み要因を返す。
   // 具体的には、IFとIEのビットが共に1になっている割り込み要因のうち、最も優先度が高いものを返す。
   // 対処すべき割り込み要因がなければkNoneを返す。
-  InterruptSource GetRequestedInterrupt();
+  InterruptSource GetRequestedInterrupt() const;
 
   void SetIf(std::uint8_t value) { if_ = value & 0x1F; };
-  std::uint8_t GetIf() { return if_; };
+  std::uint8_t GetIf() const { return if_; };
   void SetIe(std::uint8_t value) { ie_ = value & 0x1F; };
-  std::uint8_t GetIe() { return ie_; };
+  std::uint8_t GetIe() const { return ie_; };
   void SetIfBit(InterruptSource source);
   void ResetIfBit(InterruptSource source);
   void SetIeBit(InterruptSource source);

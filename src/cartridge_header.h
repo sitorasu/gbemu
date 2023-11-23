@@ -55,11 +55,11 @@ class CartridgeHeader {
   // 入力データが0x150バイトに満たない場合はエラーとしプログラムを終了する。
   void Parse(const std::vector<std::uint8_t>& rom);
   // RAMを内蔵しているか否かを返す。
-  bool HasRam();
+  bool HasRam() const;
 
-  CartridgeType type() { return type_; }
-  unsigned rom_size() { return rom_size_; }
-  unsigned ram_size() { return ram_size_; }
+  CartridgeType type() const { return type_; }
+  unsigned rom_size() const { return rom_size_; }
+  unsigned ram_size() const { return ram_size_; }
 
  private:
   std::string title_;
@@ -69,7 +69,7 @@ class CartridgeHeader {
   unsigned ram_size_;  // 単位：KiB
 
   // 各メンバ変数の値を標準出力に出力する（デバッグ用）
-  void Print();
+  void Print() const;
 };
 
 }  // namespace gbemu

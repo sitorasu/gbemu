@@ -19,7 +19,7 @@ class Cartridge {
 
   // アドレスに応じてROMまたは(External)RAMから1バイトの値を読み出す。
   // 範囲外へのアクセスはエラーとしプログラムを終了する。
-  std::uint8_t Read8(std::uint16_t address);
+  std::uint8_t Read8(std::uint16_t address) const;
   // アドレスに応じてROMまたは(External)RAMに1バイトの値を書き込む。
   // ROMへの書き込みは実際にはMBCの操作となる。
   // 範囲外へのアクセスはエラーとしプログラムを終了する。

@@ -16,7 +16,7 @@ class RomOnly : public Mbc {
       : Mbc(rom, ram) {}
   ~RomOnly() override = default;
 
-  std::uint8_t Read8(std::uint16_t address) override {
+  std::uint8_t Read8(std::uint16_t address) const override {
     return rom_.at(address);
   }
   void Write8(std::uint16_t /* address */, std::uint8_t /* value */) override {
@@ -30,7 +30,7 @@ class Mbc1 : public Mbc {
       : Mbc(rom, ram) {}
   ~Mbc1() override = default;
 
-  std::uint8_t Read8(std::uint16_t address) override {
+  std::uint8_t Read8(std::uint16_t address) const override {
     if (InRange(address, 0, 0x4000)) {
       std::uint32_t rom_address;
       if (registers_.ram_banking_mode) {

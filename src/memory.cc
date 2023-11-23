@@ -114,7 +114,7 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
   }
 }
 
-std::uint8_t Memory::ReadIORegister(std::uint16_t address) {
+std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
   // CGB固有のレジスタへのアクセスはとりあえず無効とする
   if (address >= 0xFF4D) {
     // 0xFFを返さないとcpu_instrsで実行環境がCGBと判定されてstopが実行されてしまう
@@ -136,7 +136,7 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) {
   }
 }
 
-uint8_t Memory::Read8(std::uint16_t address) {
+uint8_t Memory::Read8(std::uint16_t address) const {
   if (InRange(address, 0, 0x8000)) {
     // カートリッジからの読み出し
     return cartridge_->Read8(address);
@@ -175,14 +175,14 @@ uint8_t Memory::Read8(std::uint16_t address) {
   }
 }
 
-std::uint16_t Memory::Read16(std::uint16_t address) {
+std::uint16_t Memory::Read16(std::uint16_t address) const {
   std::uint8_t lower = Read8(address);
   std::uint8_t upper = Read8(address + 1);
   return (((std::uint16_t)upper << 8) | lower);
 }
 
 std::vector<std::uint8_t> Memory::ReadBytes(std::uint16_t address,
-                                            unsigned bytes) {
+                                            unsigned bytes) const {
   std::vector<std::uint8_t> v(bytes);
   for (unsigned i = 0; i < bytes; ++i) {
     v[i] = Read8(address + i);

@@ -51,7 +51,7 @@ Register<std::uint16_t>& Cpu::Registers::GetRegister16ByIndex(unsigned i) {
   }
 }
 
-bool Cpu::FlagsRegister::GetFlagByIndex(unsigned i) {
+bool Cpu::FlagsRegister::GetFlagByIndex(unsigned i) const {
   switch (i) {
     case 0:
       return !z_flag();  // NZ

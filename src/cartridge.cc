@@ -19,7 +19,7 @@ Cartridge::Cartridge(std::vector<std::uint8_t>&& rom)
   mbc_ = Mbc::Create(header_.type(), rom_, ram_);
 }
 
-std::uint8_t Cartridge::Read8(std::uint16_t address) {
+std::uint8_t Cartridge::Read8(std::uint16_t address) const {
   return mbc_->Read8(address);
 }
 

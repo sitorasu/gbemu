@@ -22,10 +22,10 @@ class Cpu {
   class FlagsRegister : public SingleRegister<std::uint8_t> {
    public:
     FlagsRegister(std::string name) : SingleRegister(name) {}
-    bool z_flag() { return data_ & (1 << 7); }
-    bool n_flag() { return data_ & (1 << 6); }
-    bool h_flag() { return data_ & (1 << 5); }
-    bool c_flag() { return data_ & (1 << 4); }
+    bool z_flag() const { return data_ & (1 << 7); }
+    bool n_flag() const { return data_ & (1 << 6); }
+    bool h_flag() const { return data_ & (1 << 5); }
+    bool c_flag() const { return data_ & (1 << 4); }
     void set_z_flag() { data_ |= (1 << 7); }
     void set_n_flag() { data_ |= (1 << 6); }
     void set_h_flag() { data_ |= (1 << 5); }
@@ -34,8 +34,8 @@ class Cpu {
     void reset_n_flag() { data_ &= ~(1 << 6); }
     void reset_h_flag() { data_ &= ~(1 << 5); }
     void reset_c_flag() { data_ &= ~(1 << 4); }
-    bool GetFlagByIndex(unsigned i);
-    uint8_t get() override { return data_ & 0xF0; }
+    bool GetFlagByIndex(unsigned i) const;
+    void set(std::uint8_t value) override { data_ = (value & 0xF0); }
   };
 
   using Register8Pair = RegisterPair<std::uint8_t, std::uint16_t>;

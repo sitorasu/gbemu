@@ -5,7 +5,7 @@
 
 namespace gbemu {
 
-unsigned Timer::GetTimaDivisorInLog2() {
+unsigned Timer::GetTimaDivisorInLog2() const {
   switch (tac_ & 3) {
     case 0:
       return 10;

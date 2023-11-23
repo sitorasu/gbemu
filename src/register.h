@@ -11,9 +11,9 @@ template <class UIntType>
 class Register {
  public:
   Register(std::string name) : name_(name) {}
-  virtual UIntType get() = 0;
+  virtual UIntType get() const = 0;
   virtual void set(UIntType data) = 0;
-  std::string name() { return name_; }
+  std::string name() const { return name_; }
 
  private:
   std::string name_;
@@ -25,7 +25,7 @@ template <class UIntType>
 class SingleRegister : public Register<UIntType> {
  public:
   SingleRegister(std::string name) : Register<UIntType>(name) {}
-  UIntType get() override { return data_; }
+  UIntType get() const override { return data_; }
   void set(UIntType data) override { data_ = data; }
 
  protected:
@@ -51,7 +51,7 @@ class RegisterPair : public Register<SuperUInt> {
   RegisterPair(Register<SubUInt>& upper, Register<SubUInt>& lower,
                std::string name)
       : Register<SuperUInt>(name), upper_(upper), lower_(lower) {}
-  SuperUInt get() override {
+  SuperUInt get() const override {
     return (static_cast<SuperUInt>(upper_.get()) << (sizeof(SubUInt) * 8)) |
            lower_.get();
   }

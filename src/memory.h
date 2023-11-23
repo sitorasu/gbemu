@@ -31,14 +31,15 @@ class Memory {
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
-  std::uint8_t Read8(std::uint16_t address);
-  std::uint16_t Read16(std::uint16_t address);
-  std::vector<std::uint8_t> ReadBytes(std::uint16_t address, unsigned bytes);
+  std::uint8_t Read8(std::uint16_t address) const;
+  std::uint16_t Read16(std::uint16_t address) const;
+  std::vector<std::uint8_t> ReadBytes(std::uint16_t address,
+                                      unsigned bytes) const;
   void Write8(std::uint16_t address, std::uint8_t value);
   void Write16(std::uint16_t address, std::uint16_t value);
 
  private:
-  std::uint8_t ReadIORegister(std::uint16_t address);
+  std::uint8_t ReadIORegister(std::uint16_t address) const;
   void WriteIORegister(std::uint16_t address, std::uint8_t value);
 
   constexpr static auto kInternalRamSize = 8 * 1024;

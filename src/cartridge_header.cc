@@ -126,7 +126,7 @@ void CartridgeHeader::Parse(const std::vector<std::uint8_t>& rom) {
   Print();
 }
 
-bool CartridgeHeader::HasRam() {
+bool CartridgeHeader::HasRam() const {
   switch (type_) {
     case CartridgeType::kMbc1Ram:
     case CartridgeType::kMbc1RamBattery:
@@ -149,7 +149,7 @@ bool CartridgeHeader::HasRam() {
   }
 }
 
-void CartridgeHeader::Print() {
+void CartridgeHeader::Print() const {
   std::cout << "=== Cartridge Infomation ===\n";
   std::cout << "title: " << title_ << "\n";
   std::cout << "target: " << GetCartridgeTargetString(target_) << "\n";

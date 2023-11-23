@@ -23,7 +23,7 @@ std::uint16_t Interrupt::GetInterruptHandlerAddress(InterruptSource source) {
   }
 }
 
-InterruptSource Interrupt::GetRequestedInterrupt() {
+InterruptSource Interrupt::GetRequestedInterrupt() const {
   std::uint8_t allowed = if_ & ie_;
   int min_set_bit_pos = __builtin_ffs(allowed) - 1;
   int interrupt_source_max =
