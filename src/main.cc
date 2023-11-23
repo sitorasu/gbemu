@@ -6,12 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "cartridge.h"
 #include "command_line.h"
-#include "cpu.h"
-#include "interrupt.h"
-#include "memory.h"
-#include "timer.h"
+#include "gameboy.h"
 #include "utils.h"
 
 using namespace gbemu;
@@ -54,14 +50,8 @@ int main(int argc, char* argv[]) {
 
   std::shared_ptr<Cartridge> cartridge =
       std::make_shared<Cartridge>(std::move(rom));
-  Interrupt interrupt;
-  Timer timer(interrupt);
-  Memory memory(cartridge, interrupt, timer);
-  Cpu cpu(memory, interrupt);
-  for (;;) {
-    unsigned mcycle = cpu.Step();
-    timer.step(mcycle * 4);
-  }
+  GameBoy gb(cartridge);
+  gb.Run();
 
   return 0;
 }
