@@ -128,15 +128,15 @@ class Mbc1 : public Mbc {
   Registers registers_;
 };
 
-std::unique_ptr<Mbc> Mbc::Create(CartridgeHeader::CartridgeType type,
+std::unique_ptr<Mbc> Mbc::Create(CartridgeType type,
                                  const std::vector<std::uint8_t>& rom,
                                  std::vector<std::uint8_t>& ram) {
   switch (type) {
-    case CartridgeHeader::CartridgeType::kRomOnly:
+    case CartridgeType::kRomOnly:
       return std::make_unique<RomOnly>(rom, ram);
-    case CartridgeHeader::CartridgeType::kMbc1:
-    case CartridgeHeader::CartridgeType::kMbc1Ram:
-    case CartridgeHeader::CartridgeType::kMbc1RamBattery:
+    case CartridgeType::kMbc1:
+    case CartridgeType::kMbc1Ram:
+    case CartridgeType::kMbc1RamBattery:
       return std::make_unique<Mbc1>(rom, ram);
     default:
       UNREACHABLE("Unknown cartridge type.");

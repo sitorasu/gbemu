@@ -11,29 +11,10 @@
 
 namespace gbemu {
 
-using CartridgeTarget = CartridgeHeader::CartridgeTarget;
-using CartridgeType = CartridgeHeader::CartridgeType;
-
-CartridgeHeader CartridgeHeader::Create(const std::vector<std::uint8_t>& rom) {
-  auto size = rom.size();
-  constexpr auto kHeaderSize = 0x150;
-  if (size < kHeaderSize) {
-    Error("ROM size is too small.");
-  }
-  CartridgeHeader header(rom);
-  header.Print();
-  return header;
-}
-
-// ROMの$0134から15または16バイトを取得
-std::string CartridgeHeader::GetTitle(const std::vector<std::uint8_t>& rom) {
-  auto title_size = GetCartridgeTarget(rom) == CartridgeTarget::kGb ? 16 : 15;
-  return std::string(reinterpret_cast<const char*>(&rom[0x134]), title_size);
-}
+namespace {
 
 // $0143（CGB flag）を取得
-CartridgeTarget CartridgeHeader::GetCartridgeTarget(
-    const std::vector<std::uint8_t>& rom) {
+CartridgeTarget GetCartridgeTarget(const std::vector<std::uint8_t>& rom) {
   std::uint8_t value = rom[0x143];
   switch (value) {
     case 0x80:
@@ -50,9 +31,14 @@ CartridgeTarget CartridgeHeader::GetCartridgeTarget(
   }
 }
 
+// ROMの$0134から15または16バイトを取得
+std::string GetTitle(const std::vector<std::uint8_t>& rom) {
+  auto title_size = GetCartridgeTarget(rom) == CartridgeTarget::kGb ? 16 : 15;
+  return std::string(reinterpret_cast<const char*>(&rom[0x134]), title_size);
+}
+
 // $0147（Cartridge type）を取得
-CartridgeType CartridgeHeader::GetCartridgeType(
-    const std::vector<std::uint8_t>& rom) {
+CartridgeType GetCartridgeType(const std::vector<std::uint8_t>& rom) {
   std::uint8_t value = rom[0x147];
   switch (value) {
     case 0x00:
@@ -67,20 +53,17 @@ CartridgeType CartridgeHeader::GetCartridgeType(
 }
 
 // $0148（ROM size）を取得
-std::uint32_t CartridgeHeader::GetRomSize(
-    const std::vector<std::uint8_t>& rom) {
-  std::uint8_t value = rom[0x148];
+unsigned GetRomSize(const std::vector<std::uint8_t>& rom) {
+  unsigned value = rom[0x148];
   if (0 <= value && value <= 8) {
     return (32 << value);
-  } else {
-    Error("Invalid cartridge header at $0148: %d.", static_cast<int>(value));
   }
+  Error("Invalid cartridge header at $0148: %d.", static_cast<int>(value));
 }
 
 // $0149（RAM size）を取得
-std::uint32_t CartridgeHeader::GetRamSize(
-    const std::vector<std::uint8_t>& rom) {
-  std::uint8_t value = rom[0x149];
+unsigned GetRamSize(const std::vector<std::uint8_t>& rom) {
+  unsigned value = rom[0x149];
   switch (value) {
     case 0x00:
       return 0;
@@ -97,7 +80,7 @@ std::uint32_t CartridgeHeader::GetRamSize(
   }
 }
 
-std::string CartridgeHeader::GetCartridgeTargetString(CartridgeTarget target) {
+std::string GetCartridgeTargetString(CartridgeTarget target) {
   switch (target) {
     case CartridgeTarget::kGb:
       return "GB";
@@ -108,7 +91,7 @@ std::string CartridgeHeader::GetCartridgeTargetString(CartridgeTarget target) {
   }
 }
 
-std::string CartridgeHeader::GetCartridgeTypeString(CartridgeType type) {
+std::string GetCartridgeTypeString(CartridgeType type) {
   switch (type) {
     case CartridgeType::kRomOnly:
       return "ROM Only";
@@ -121,13 +104,31 @@ std::string CartridgeHeader::GetCartridgeTypeString(CartridgeType type) {
   }
 }
 
+}  // namespace
+
+void CartridgeHeader::Parse(const std::vector<std::uint8_t>& rom) {
+  auto size = rom.size();
+  auto header_end_address = 0x150U;
+  if (size < header_end_address) {
+    Error("ROM size is too small.");
+  }
+
+  title_ = GetTitle(rom);
+  target_ = GetCartridgeTarget(rom);
+  type_ = GetCartridgeType(rom);
+  rom_size_ = GetRomSize(rom);
+  ram_size_ = GetRamSize(rom);
+
+  Print();
+}
+
 void CartridgeHeader::Print() {
   std::cout << "=== Cartridge Infomation ===\n";
-  std::cout << "title: " << title << "\n";
-  std::cout << "target: " << GetCartridgeTargetString(target) << "\n";
-  std::cout << "type: " << GetCartridgeTypeString(type) << "\n";
-  std::cout << "rom_size: " << rom_size << " KiB\n";
-  std::cout << "ram_size: " << ram_size << " KiB\n";
+  std::cout << "title: " << title_ << "\n";
+  std::cout << "target: " << GetCartridgeTargetString(target_) << "\n";
+  std::cout << "type: " << GetCartridgeTypeString(type_) << "\n";
+  std::cout << "rom_size: " << rom_size_ << " KiB\n";
+  std::cout << "ram_size: " << ram_size_ << " KiB\n";
   std::cout << "============================\n";
 }
 

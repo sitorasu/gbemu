@@ -26,7 +26,7 @@ class Mbc {
   // CPUによる`address`への書き込み要求に対処する。
   virtual void Write8(std::uint16_t address, std::uint8_t value) = 0;
   // `type`が表すMBCの種類に対応するMbcの派生クラスのインスタンスを生成する。
-  static std::unique_ptr<Mbc> Create(CartridgeHeader::CartridgeType type,
+  static std::unique_ptr<Mbc> Create(CartridgeType type,
                                      const std::vector<std::uint8_t>& rom,
                                      std::vector<std::uint8_t>& ram);
   Mbc(const std::vector<std::uint8_t>& rom, std::vector<std::uint8_t>& ram)
@@ -36,7 +36,7 @@ class Mbc {
  protected:
   // このMBCが読み出すROM。
   const std::vector<std::uint8_t>& rom_;
-  // このMBCが読み書きするRAM。
+  // このMBCが読み書きする（カートリッジ内蔵の）RAM。
   std::vector<std::uint8_t>& ram_;
 };
 

@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -51,7 +52,8 @@ int main(int argc, char* argv[]) {
   // ROMファイルをロード
   std::vector<std::uint8_t> rom(LoadRom(options.filename()));
 
-  Cartridge cartridge(std::move(rom));
+  std::shared_ptr<Cartridge> cartridge =
+      std::make_shared<Cartridge>(std::move(rom));
   Interrupt interrupt;
   Timer timer(interrupt);
   Memory memory(cartridge, interrupt, timer);

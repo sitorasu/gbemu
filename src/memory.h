@@ -2,6 +2,7 @@
 #define GBEMU_MEMORY_H_
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "cartridge.h"
@@ -22,7 +23,8 @@ namespace gbemu {
 //   std::uint8_t result = memory.Read8(address);
 class Memory {
  public:
-  Memory(Cartridge& cartridge, Interrupt& interrupt, Timer& timer)
+  Memory(std::shared_ptr<Cartridge> cartridge, Interrupt& interrupt,
+         Timer& timer)
       : cartridge_(cartridge),
         interrupt_(interrupt),
         timer_(timer),
@@ -41,7 +43,7 @@ class Memory {
 
   constexpr static auto kInternalRamSize = 8 * 1024;
   constexpr static auto kHRamSize = 127;
-  Cartridge& cartridge_;
+  std::shared_ptr<Cartridge> cartridge_;
   Interrupt& interrupt_;
   Timer& timer_;
 
