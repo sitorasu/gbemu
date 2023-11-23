@@ -54,6 +54,8 @@ class CartridgeHeader {
   // ROMのヘッダーをパースしメンバ変数を設定する。
   // 入力データが0x150バイトに満たない場合はエラーとしプログラムを終了する。
   void Parse(const std::vector<std::uint8_t>& rom);
+  // RAMを内蔵しているか否かを返す。
+  bool HasRam();
 
   CartridgeType type() { return type_; }
   unsigned rom_size() { return rom_size_; }

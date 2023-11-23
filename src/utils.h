@@ -46,6 +46,7 @@ namespace gbemu {
   }
 
 // 警告を出すマクロ。
+// 使用例: WARN("Waning: %d", x);
 #define WARN(...)                                   \
   {                                                 \
     std::fprintf(stderr, "System warning:\n");      \

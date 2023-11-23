@@ -119,7 +119,34 @@ void CartridgeHeader::Parse(const std::vector<std::uint8_t>& rom) {
   rom_size_ = GetRomSize(rom);
   ram_size_ = GetRamSize(rom);
 
+  if (HasRam() != (ram_size() != 0)) {
+    Error("Ram size is not consistent with cartridge type.");
+  }
+
   Print();
+}
+
+bool CartridgeHeader::HasRam() {
+  switch (type_) {
+    case CartridgeType::kMbc1Ram:
+    case CartridgeType::kMbc1RamBattery:
+    case CartridgeType::kRomRam:
+    case CartridgeType::kRomRamBattery:
+    case CartridgeType::kMmm01Ram:
+    case CartridgeType::kMmm01RamBattery:
+    case CartridgeType::kMbc3TimerRamBattery:
+    case CartridgeType::kMbc3Ram:
+    case CartridgeType::kMbc3RamBattery:
+    case CartridgeType::kMbc5Ram:
+    case CartridgeType::kMbc5RamBattery:
+    case CartridgeType::kMbc5RumbleRam:
+    case CartridgeType::kMbc5RumbleRamBattery:
+    case CartridgeType::kMbc7SensorRumbleRamBattery:
+    case CartridgeType::kHuc1RamBattery:
+      return true;
+    default:
+      return false;
+  }
 }
 
 void CartridgeHeader::Print() {
