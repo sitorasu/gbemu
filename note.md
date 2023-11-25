@@ -61,9 +61,9 @@ cmake --build .
 ## マイルストーン
 - [x] テスト用ROM（cpu_instrs, instr_timing）を用意する
 - [x] MBC1を実装する（テスト用ROMがMBC1なので）
-- [ ] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
+- [x] CPUを実装してcpu_instrsを通す（シリアル出力で確認）
   - [x] 01-special
-  - [ ] 02-interrupts
+  - [x] 02-interrupts
   - [x] 03-op sp,hl
   - [x] 04-op r, imm
   - [x] 05-op rp
@@ -73,10 +73,10 @@ cmake --build .
   - [x] 09-op r,r
   - [x] 10-bit ops
   - [x] 11-op a,(hl)
-- [ ] CPUを実装してinstr_timingを通す（シリアル出力で確認）
+- [x] CPUを実装してinstr_timingを通す（シリアル出力で確認）
 - [ ] PPUを実装してテスト用ROMを通す
 - [ ] APUを実装する
-- [ ] cmakeの導入
+- [x] cmakeの導入
 
 ## ToDo
 - [ ] CartridegeHeaderのコンストラクタを簡素化する
