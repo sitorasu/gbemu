@@ -6,8 +6,17 @@
 * テストツール何か
 
 ## コンパイルコマンド
+手打ちの場合
 ```
 g++ -std=c++17 -Wall -Wextra src/*.cc
+```
+CMakeを使う場合
+```
+# プロジェクトのルートで
+mkdir build
+cd build
+cmake ..
+cmake --build .
 ```
 
 ## 方針
