@@ -48,36 +48,21 @@ class IORegisters {
         return nr51_;
       case 0xFF26:
         return nr52_;
-      case 0xFF40:
-        return lcdc_;
-      case 0xFF42:
-        return scy_;
-      case 0xFF43:
-        return scx_;
-      case 0xFF44:
-        return ly_;
-      case 0xFF47:
-        return bgp_;
       default:
         UNREACHABLE("Unknown I/O register: $%04X", address);
     }
   }
 
-  std::uint8_t joyp_{};    // $FF00
-  std::uint8_t sb_{};      // $FF01
-  std::uint8_t sc_{};      // $FF02
-  std::uint8_t nr11_{};    // $FF11
-  std::uint8_t nr12_{};    // $FF12
-  std::uint8_t nr13_{};    // $FF13
-  std::uint8_t nr14_{};    // $FF14
-  std::uint8_t nr50_{};    // $FF24
-  std::uint8_t nr51_{};    // $FF25
-  std::uint8_t nr52_{};    // $FF26
-  std::uint8_t lcdc_{};    // $FF40
-  std::uint8_t scy_{};     // $FF42
-  std::uint8_t scx_{};     // $FF43
-  std::uint8_t ly_{0x90};  // $FF44 VBlankの先頭で固定
-  std::uint8_t bgp_{};     // $FF47
+  std::uint8_t joyp_{};  // $FF00
+  std::uint8_t sb_{};    // $FF01
+  std::uint8_t sc_{};    // $FF02
+  std::uint8_t nr11_{};  // $FF11
+  std::uint8_t nr12_{};  // $FF12
+  std::uint8_t nr13_{};  // $FF13
+  std::uint8_t nr14_{};  // $FF14
+  std::uint8_t nr50_{};  // $FF24
+  std::uint8_t nr51_{};  // $FF25
+  std::uint8_t nr52_{};  // $FF26
 };
 
 IORegisters io_regs;
@@ -108,6 +93,39 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
     case 0xFF0F:
       interrupt_.SetIf(value);
       break;
+    case 0xFF40:
+      ppu_.set_lcdc(value);
+      break;
+    case 0xFF41:
+      ppu_.set_stat(value);
+      break;
+    case 0xFF42:
+      ppu_.set_scy(value);
+      break;
+    case 0xFF43:
+      ppu_.set_scx(value);
+      break;
+    case 0xFF45:
+      ppu_.set_lyc(value);
+      break;
+    case 0xFF46:
+      ppu_.set_dma(value);
+      break;
+    case 0xFF47:
+      ppu_.set_bgp(value);
+      break;
+    case 0xFF48:
+      ppu_.set_obp0(value);
+      break;
+    case 0xFF49:
+      ppu_.set_obp1(value);
+      break;
+    case 0xFF4A:
+      ppu_.set_wy(value);
+      break;
+    case 0xFF4B:
+      ppu_.set_wx(value);
+      break;
     default:
       io_regs.Write(address, value);
       break;
@@ -131,6 +149,31 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
       return timer_.tac();
     case 0xFF0F:
       return interrupt_.GetIf();
+    case 0xFF40:
+      return ppu_.lcdc();
+    case 0xFF41:
+      return ppu_.stat();
+    case 0xFF42:
+      return ppu_.scy();
+    case 0xFF43:
+      return ppu_.scx();
+    case 0xFF44:
+      // return ppu_.ly();
+      return 0x90;  // VBlankの先頭で固定
+    case 0xFF45:
+      return ppu_.lyc();
+    case 0xFF46:
+      return ppu_.dma();
+    case 0xFF47:
+      return ppu_.bgp();
+    case 0xFF48:
+      return ppu_.obp0();
+    case 0xFF49:
+      return ppu_.obp1();
+    case 0xFF4A:
+      return ppu_.wy();
+    case 0xFF4B:
+      return ppu_.wx();
     default:
       return io_regs.Read(address);
   }
@@ -142,8 +185,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     return cartridge_->Read8(address);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMからの読み出し
-    // WARN("Read from VRAM is not implemented.");
-    return vram.at(address & 0x1FFF);
+    return ppu_.ReadVRam8(address);
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMからの読み出し
     return cartridge_->Read8(address);
@@ -155,7 +197,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     Error("Read from $C0000-DDFF is prohibited.");
   } else if (InRange(address, 0xFE00, 0xFDA0)) {
     // OAM RAMからの読み出し
-    UNREACHABLE("Read from OAM RAM is not implemented.");
+    return ppu_.ReadOam8(address);
   } else if (InRange(address, 0xFEA0, 0xFF00)) {
     // アクセス禁止区間
     Error("Read from $FEA0-FEFF is prohibited.");
@@ -196,8 +238,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     cartridge_->Write8(address, value);
   } else if (InRange(address, 0x8000, 0xA000)) {
     // VRAMへの書き込み
-    // WARN("Write to VRAM is not implemented.");
-    vram.at(address & 0x1FFF) = value;
+    ppu_.WriteVRam8(address, value);
   } else if (InRange(address, 0xA000, 0xC000)) {
     // External RAMへの書き込み
     cartridge_->Write8(address, value);
@@ -209,7 +250,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     Error("Write to $C0000-DDFF is prohibited.");
   } else if (InRange(address, 0xFE00, 0xFDA0)) {
     // OAM RAMへの書き込み
-    UNREACHABLE("Write to OAM RAM is not implemented.");
+    ppu_.WriteOam8(address, value);
   } else if (InRange(address, 0xFEA0, 0xFF00)) {
     // アクセス禁止区間
     Error("Write to $FEA0-FEFF is prohibited.");

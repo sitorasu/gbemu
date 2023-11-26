@@ -7,6 +7,7 @@
 
 #include "cartridge.h"
 #include "interrupt.h"
+#include "ppu.h"
 #include "timer.h"
 
 namespace gbemu {
@@ -24,10 +25,11 @@ namespace gbemu {
 class Memory {
  public:
   Memory(std::shared_ptr<Cartridge> cartridge, Interrupt& interrupt,
-         Timer& timer)
+         Timer& timer, Ppu& ppu)
       : cartridge_(cartridge),
         interrupt_(interrupt),
         timer_(timer),
+        ppu_(ppu),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
@@ -47,6 +49,7 @@ class Memory {
   std::shared_ptr<Cartridge> cartridge_;
   Interrupt& interrupt_;
   Timer& timer_;
+  Ppu& ppu_;
 
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;

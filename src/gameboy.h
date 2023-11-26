@@ -7,6 +7,7 @@
 #include "cpu.h"
 #include "interrupt.h"
 #include "memory.h"
+#include "ppu.h"
 #include "timer.h"
 
 namespace gbemu {
@@ -16,14 +17,16 @@ class GameBoy {
   GameBoy(std::shared_ptr<Cartridge> cartridge)
       : cartridge_(cartridge),
         interrupt_(),
+        ppu_(),
         timer_(interrupt_),
-        memory_(cartridge_, interrupt_, timer_),
+        memory_(cartridge_, interrupt_, timer_, ppu_),
         cpu_(memory_, interrupt_) {}
   void Run();
 
  private:
   std::shared_ptr<Cartridge> cartridge_;
   Interrupt interrupt_;
+  Ppu ppu_;
   Timer timer_;
   Memory memory_;
   Cpu cpu_;

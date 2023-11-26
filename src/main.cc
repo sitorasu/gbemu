@@ -90,6 +90,7 @@ void WaitForNextFrame() {
 int main(int argc, char* argv[]) {
   options.Parse(argc, argv);
 
+#if 0
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     Error("SDL_Init Error: %s", SDL_GetError());
   }
@@ -124,8 +125,9 @@ int main(int argc, char* argv[]) {
       }
     }
   }
+#endif
 
-#if 0
+#if 1
   // ROMファイルをロード
   std::vector<std::uint8_t> rom(LoadRom(options.filename()));
 
