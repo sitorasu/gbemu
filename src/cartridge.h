@@ -10,7 +10,7 @@
 
 namespace gbemu {
 
-// カートリッジを表すクラス。Mbcを介して操作する。
+// カートリッジを表すクラス。
 class Cartridge {
  public:
   // ROMの内容をもとにインスタンスを生成する。
