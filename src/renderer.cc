@@ -10,7 +10,7 @@
 using namespace gbemu;
 
 Renderer::Renderer(int screen_scale)
-    : screen_scale_(screen_scale <= 0 ? 1 : screen_scale) {
+    : screen_scale_(screen_scale <= 0 ? 1 : screen_scale), vsync_(false) {
   int screen_width = kGBHorizontalPixels * screen_scale_;
   int screen_height = kGBVerticalPixels * screen_scale_;
   window_ = SDL_CreateWindow(
@@ -20,7 +20,17 @@ Renderer::Renderer(int screen_scale)
     Error("SDL_CreateWindow Error: %s", SDL_GetError());
   }
 
-  renderer_ = SDL_CreateRenderer(window_, -1, SDL_RENDERER_ACCELERATED);
+  // ディスプレイのリフレッシュレートが60Hzなら垂直同期オン
+  int disp = SDL_GetWindowDisplayIndex(window_);
+  SDL_DisplayMode mode;
+  SDL_GetCurrentDisplayMode(disp, &mode);
+  Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
+  if (mode.refresh_rate == 60) {
+    renderer_flags |= SDL_RENDERER_PRESENTVSYNC;
+    vsync_ = true;
+  }
+
+  renderer_ = SDL_CreateRenderer(window_, -1, renderer_flags);
   if (renderer_ == nullptr) {
     Error("SDL_CreateRenderer Error: %s", SDL_GetError());
   }
@@ -41,6 +51,7 @@ Renderer::Renderer(int screen_scale)
   }
   pixel_size_ = drawable_width / kGBHorizontalPixels;
 
+  // ゲームボーイの4色の設定
   colors_[kWhite] = {232, 232, 232, 255};
   colors_[kLightGray] = {160, 160, 160, 255};
   colors_[kDarkGray] = {88, 88, 88, 255};

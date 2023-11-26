@@ -99,15 +99,29 @@ int main(int argc, char* argv[]) {
   {
     Renderer renderer(1);
     LCDPixels pixels = {};
-    while (!PollQuit()) {
-      // ゲームボーイを1フレーム動作させる
-      // 描画すべきグラフィックを取得する
-      // 描画する
-      UpdateLCDPixels(pixels);
-      renderer.RenderLCDPixels(pixels);
+    if (renderer.vsync()) {
+      // 垂直同期オン
+      std::cout << "vsync on" << std::endl;
+      while (!PollQuit()) {
+        // ゲームボーイを1フレーム動作させる
+        // 描画すべきグラフィックを取得する
+        // 描画する
+        UpdateLCDPixels(pixels);
+        renderer.RenderLCDPixels(pixels);
+      }
+    } else {
+      // 垂直同期オフ
+      std::cout << "vsync off" << std::endl;
+      while (!PollQuit()) {
+        // ゲームボーイを1フレーム動作させる
+        // 描画すべきグラフィックを取得する
+        // 描画する
+        UpdateLCDPixels(pixels);
+        renderer.RenderLCDPixels(pixels);
 
-      // 次のフレーム開始時間まで待つ
-      WaitForNextFrame();
+        // 次のフレーム開始時間まで待つ
+        WaitForNextFrame();
+      }
     }
   }
 

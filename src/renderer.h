@@ -31,11 +31,13 @@ class Renderer {
   Renderer(int screen_scale = 1);
   ~Renderer();
   void RenderLCDPixels(const LCDPixels& pixels) const;
+  bool vsync() { return vsync_; }
 
  private:
   int screen_scale_;  // ウインドウのサイズの拡大率
   int pixel_size_;  // ゲームボーイのLCDの1ピクセルを、1辺何ピクセルの正方形で表現するか
                     // このピクセル数はHiDPIかどうかに関係なくディスプレイの実際のピクセル数を指す
+  bool vsync_;      // 垂直同期
   SDL_Color colors_[kGBColorNum];  // enumから実際の色への対応
   SDL_Window* window_;
   SDL_Renderer* renderer_;
