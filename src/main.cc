@@ -74,14 +74,18 @@ void WaitForNextFrame() {
 
 }  // namespace
 
+#define ENABLE_LCD
+
 int main(int argc, char* argv[]) {
   options.Parse(argc, argv);
 
+#ifdef ENABLE_LCD
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     Error("SDL_Init Error: %s", SDL_GetError());
   }
 
   std::atexit(SDL_Quit);
+#endif
 
   // ROMファイルをロード
   std::vector<std::uint8_t> rom(LoadRom(options.filename()));
@@ -89,14 +93,14 @@ int main(int argc, char* argv[]) {
   std::shared_ptr<Cartridge> cartridge =
       std::make_shared<Cartridge>(std::move(rom));
   GameBoy gb(cartridge);
-#if 1
+#ifndef ENABLE_LCD
   for (;;) {
     gb.Step();
     auto& buffer = gb.GetBuffer();
   }
 #else
   {
-    Renderer renderer(1);
+    Renderer renderer(3);
     if (renderer.vsync()) {
       // 垂直同期オン
       std::cout << "vsync on" << std::endl;

@@ -124,6 +124,7 @@ unsigned Ppu::Step() {
           is_buffer_ready_ = false;
         } else {
           // 最後の行に達するまではVBlankのまま
+          elapsed_cycles_in_current_mode_ = 0;
         }
         IncrementLy();
       }
