@@ -11,8 +11,8 @@ using namespace gbemu;
 
 Renderer::Renderer(int screen_scale)
     : screen_scale_(screen_scale <= 0 ? 1 : screen_scale), vsync_(false) {
-  int screen_width = kGBHorizontalPixels * screen_scale_;
-  int screen_height = kGBVerticalPixels * screen_scale_;
+  int screen_width = kLcdHorizontalPixelNum * screen_scale_;
+  int screen_height = kLcdVerticalPixelNum * screen_scale_;
   window_ = SDL_CreateWindow(
       "GBEMU", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_width,
       screen_height, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -43,13 +43,13 @@ Renderer::Renderer(int screen_scale)
   // 描画可能領域を160x144の格子に分割するには
   // 格子の1辺を何ピクセルから構成すればよいか調べる。
   // 格子に分割できない、あるいは格子が正方形とならない場合はエラーとする。
-  if ((drawable_width % kGBHorizontalPixels) != 0 ||
-      (drawable_height % kGBVerticalPixels) != 0 ||
-      (drawable_width / kGBHorizontalPixels) !=
-          (drawable_height / kGBVerticalPixels)) {
+  if ((drawable_width % kLcdHorizontalPixelNum) != 0 ||
+      (drawable_height % kLcdVerticalPixelNum) != 0 ||
+      (drawable_width / kLcdHorizontalPixelNum) !=
+          (drawable_height / kLcdVerticalPixelNum)) {
     Error("Not supported scaling rate");
   }
-  pixel_size_ = drawable_width / kGBHorizontalPixels;
+  pixel_size_ = drawable_width / kLcdHorizontalPixelNum;
 
   // ゲームボーイの4色の設定
   colors_[kWhite] = {232, 232, 232, 255};
@@ -63,15 +63,15 @@ Renderer::~Renderer() {
   SDL_DestroyWindow(window_);
 }
 
-void Renderer::RenderLCDPixels(const LCDPixels& pixels) const {
+void Renderer::RenderLCDPixels(const GbLcdPixelMatrix& pixels) const {
   SDL_SetRenderDrawColor(renderer_, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderClear(renderer_);
-  for (int i = 0; i < kGBHorizontalPixels; i++) {
-    for (int j = 0; j < kGBVerticalPixels; j++) {
+  for (int i = 0; i < kLcdVerticalPixelNum; i++) {
+    for (int j = 0; j < kLcdHorizontalPixelNum; j++) {
       SDL_Color color = colors_[pixels[i][j]];
       SDL_Rect rect;
-      rect.x = i * pixel_size_;
-      rect.y = j * pixel_size_;
+      rect.x = j * pixel_size_;
+      rect.y = i * pixel_size_;
       rect.w = pixel_size_;
       rect.h = pixel_size_;
       SDL_SetRenderDrawColor(renderer_, color.r, color.g, color.b, color.a);

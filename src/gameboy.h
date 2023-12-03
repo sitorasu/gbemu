@@ -17,11 +17,13 @@ class GameBoy {
   GameBoy(std::shared_ptr<Cartridge> cartridge)
       : cartridge_(cartridge),
         interrupt_(),
-        ppu_(),
+        ppu_(interrupt_),
         timer_(interrupt_),
         memory_(cartridge_, interrupt_, timer_, ppu_),
         cpu_(memory_, interrupt_) {}
-  void Run();
+  // 1フレーム進める
+  void Step();
+  const GbLcdPixelMatrix& GetBuffer() const { return ppu_.GetBuffer(); }
 
  private:
   std::shared_ptr<Cartridge> cartridge_;

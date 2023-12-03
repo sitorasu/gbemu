@@ -23,6 +23,34 @@ namespace gbemu {
 //   std::uint16_t address = 0x3000;
 //   std::uint8_t result = memory.Read8(address);
 class Memory {
+ private:
+  class Dma {
+   public:
+    Dma(Memory& memory) : memory_(memory) {}
+
+    std::uint8_t dma() const { return dma_; }
+
+    // DMAレジスタに値をセットしDMA転送を開始する。
+    void StartDma(std::uint8_t value) {
+      dma_ = value;
+      during_transfer_ = true;
+      src_address_ = (dma_ << 8);
+      dst_address_ = kOamStartAddress;
+    }
+
+    // 指定したマシンサイクル数だけDMA転送を進める
+    void Run(unsigned mcycles);
+
+   private:
+    static constexpr std::uint16_t kOamStartAddress = 0xFE00;
+    static constexpr std::uint16_t kOamEndAddress = 0xFEA0;
+    Memory& memory_;
+    std::uint8_t dma_{};
+    bool during_transfer_{};
+    std::uint16_t src_address_{};
+    std::uint16_t dst_address_{kOamStartAddress};
+  };
+
  public:
   Memory(std::shared_ptr<Cartridge> cartridge, Interrupt& interrupt,
          Timer& timer, Ppu& ppu)
@@ -30,6 +58,7 @@ class Memory {
         interrupt_(interrupt),
         timer_(timer),
         ppu_(ppu),
+        dma_(*this),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize) {}
   // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
@@ -39,6 +68,9 @@ class Memory {
                                       unsigned bytes) const;
   void Write8(std::uint16_t address, std::uint8_t value);
   void Write16(std::uint16_t address, std::uint16_t value);
+
+  // DMAを指定のマシンサイクルだけ進める
+  void RunDma(unsigned mcycles) { dma_.Run(mcycles); }
 
  private:
   std::uint8_t ReadIORegister(std::uint16_t address) const;
@@ -50,6 +82,7 @@ class Memory {
   Interrupt& interrupt_;
   Timer& timer_;
   Ppu& ppu_;
+  Dma dma_;
 
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;

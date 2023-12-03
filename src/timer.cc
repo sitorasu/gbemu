@@ -20,7 +20,7 @@ unsigned Timer::GetTimaDivisorInLog2() const {
   }
 }
 
-void Timer::step() {
+void Timer::Step() {
   std::uint16_t old_counter = counter_;
   counter_++;
 
@@ -46,9 +46,9 @@ void Timer::step() {
   }
 }
 
-void Timer::step(unsigned tcycle) {
+void Timer::Run(unsigned tcycle) {
   for (unsigned i = 0; i < tcycle; i++) {
-    step();
+    Step();
   }
 }
 

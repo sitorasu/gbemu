@@ -5,23 +5,9 @@
 
 #include <array>
 
+#include "ppu.h"
+
 namespace gbemu {
-
-// この定義はPPUに移してもいいかも
-enum GBColor {
-  kWhite,
-  kLightGray,
-  kDarkGray,
-  kBlack,
-  kGBColorNum,
-};
-
-constexpr auto kGBHorizontalPixels = 160;
-constexpr auto kGBVerticalPixels = 144;
-constexpr auto kGBTotalPixels = kGBHorizontalPixels * kGBVerticalPixels;
-
-using LCDPixels =
-    std::array<std::array<GBColor, kGBVerticalPixels>, kGBHorizontalPixels>;
 
 // ゲームボーイの画面を描画するクラス。
 // 160x144（HiDPIの場合は擬似解像度換算）の整数倍のサイズのウインドウに描画する。
@@ -30,7 +16,7 @@ class Renderer {
  public:
   Renderer(int screen_scale = 1);
   ~Renderer();
-  void RenderLCDPixels(const LCDPixels& pixels) const;
+  void RenderLCDPixels(const GbLcdPixelMatrix& pixels) const;
   bool vsync() { return vsync_; }
 
  private:

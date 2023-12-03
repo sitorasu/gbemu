@@ -22,11 +22,11 @@ class Timer {
   void set_tac(std::uint8_t value) { tac_ = value; }
 
   // 指定したクロック数だけ状態を進める。
-  void step(unsigned tcycle);
+  void Run(unsigned tcycle);
 
  private:
   // 1クロックだけ状態を進める。
-  void step();
+  void Step();
 
   // TACで設定したTIMAのインクリメントの周波数を
   // CPUクロックの周波数/(2^n) と表したときのnを返す。

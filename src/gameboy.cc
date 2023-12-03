@@ -2,11 +2,14 @@
 
 namespace gbemu {
 
-void GameBoy::Run() {
-  for (;;) {
-    unsigned mcycle = cpu_.Step();
-    timer_.step(mcycle * 4);
+void GameBoy::Step() {
+  while (!ppu_.IsBufferReady()) {
+    unsigned mcycles = cpu_.Step();
+    unsigned tcycles = mcycles * 4;
+    memory_.RunDma(mcycles);
+    timer_.Run(tcycles);
+    ppu_.Run(tcycles);
   }
 }
 
-}
+}  // namespace gbemu

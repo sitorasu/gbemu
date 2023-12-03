@@ -109,7 +109,7 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
       ppu_.set_lyc(value);
       break;
     case 0xFF46:
-      ppu_.set_dma(value);
+      dma_.StartDma(value);
       break;
     case 0xFF47:
       ppu_.set_bgp(value);
@@ -158,12 +158,12 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
     case 0xFF43:
       return ppu_.scx();
     case 0xFF44:
-      // return ppu_.ly();
-      return 0x90;  // VBlankの先頭で固定
+      return ppu_.ly();
+      // return 0x90;  // VBlankの先頭で固定
     case 0xFF45:
       return ppu_.lyc();
     case 0xFF46:
-      return ppu_.dma();
+      return dma_.dma();
     case 0xFF47:
       return ppu_.bgp();
     case 0xFF48:
@@ -203,7 +203,6 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     Error("Read from $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタからの読み出し
-    // WARN("Read from I/O register is not implemented.");
     return ReadIORegister(address);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMからの読み出し
@@ -248,7 +247,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
   } else if (InRange(address, 0xE000, 0xFE00)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
     Error("Write to $C0000-DDFF is prohibited.");
-  } else if (InRange(address, 0xFE00, 0xFDA0)) {
+  } else if (InRange(address, 0xFE00, 0xFEA0)) {
     // OAM RAMへの書き込み
     ppu_.WriteOam8(address, value);
   } else if (InRange(address, 0xFEA0, 0xFF00)) {
@@ -256,7 +255,6 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     Error("Write to $FEA0-FEFF is prohibited.");
   } else if (InRange(address, 0xFF00, 0xFF80)) {
     // I/Oレジスタへの書き込み
-    // WARN("Write to I/O register is not implemented.");
     WriteIORegister(address, value);
   } else if (InRange(address, 0xFF80, 0xFFFE)) {
     // HRAMへの書き込み
@@ -273,6 +271,24 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
 void Memory::Write16(std::uint16_t address, std::uint16_t value) {
   Write8(address, value & 0xFF);
   Write8(address + 1, value >> 8);
+}
+
+void Memory::Dma::Run(unsigned mcycles) {
+  if (!during_transfer_) {
+    return;
+  }
+  while (mcycles > 0) {
+    std::uint8_t value = memory_.Read8(src_address_);
+    memory_.Write8(dst_address_, value);
+    src_address_++;
+    dst_address_++;
+    mcycles--;
+    if (dst_address_ == kOamEndAddress) {
+      // 他は転送開始時にリセットするので今はほっとく
+      during_transfer_ = false;
+      break;
+    }
+  }
 }
 
 }  // namespace gbemu
