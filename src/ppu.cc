@@ -59,11 +59,7 @@ void Ppu::ScanSingleObject() {
 
 void Ppu::WriteCurrentLineToBuffer() {
   // とりあえずオブジェクトだけ書いてみる
-  while (!objects_on_scan_line_.empty()) {
-    const Object& object = objects_on_scan_line_.top();
-    WriteObjectOnCurrentLine(object);
-    objects_on_scan_line_.pop();
-  }
+  WriteObjectsOnCurrentLine();
 }
 
 // サイクル数はM-cycle単位（＝4の倍数のT-cycle）でしか渡されず、
@@ -137,14 +133,14 @@ void Ppu::SetPpuMode(PpuMode mode) {
 
   // STATレジスタを更新
   unsigned mode_num = static_cast<unsigned>(mode);
-  stat_ = (stat_ | mode_num) & mode_num;
+  stat_ = (stat_ & ~0b11U) | mode_num;
 
   // 割り込みフラグを更新
   if (mode == PpuMode::kVBlank) {
     interrupt_.SetIfBit(InterruptSource::kVblank);
   } else {
     unsigned mode_interrupt_select_bit = 1U << (mode_num + 3);
-    if (lcdc_ | mode_interrupt_select_bit) {
+    if (stat_ & mode_interrupt_select_bit) {
       interrupt_.SetIfBit(InterruptSource::kStat);
     }
   }
@@ -163,14 +159,26 @@ void Ppu::IncrementLy() {
   if (lyc_ == ly_) {
     stat_ |= (1U << 2);
     // 割り込みフラグを更新する
-    if (stat_ | (1U << 6)) {
+    if (stat_ & (1U << 6)) {
       interrupt_.SetIfBit(InterruptSource::kStat);
     }
   }
 }
 
-void gbemu::Ppu::WriteObjectOnCurrentLine(const Object& object) {
-  // とりあえずオブジェクトだけ書いてみる
+void Ppu::WriteObjectsOnCurrentLine() {
+  // LCDCでオブジェクトの描画が無効になっているなら何もしない
+  if (!IsObjectEnabled()) {
+    return;
+  }
+
+  while (!objects_on_scan_line_.empty()) {
+    const Object& object = objects_on_scan_line_.top();
+    WriteSingleObjectOnCurrentLine(object);
+    objects_on_scan_line_.pop();
+  }
+}
+
+void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   GbLcdPixelLine& line = buffer_.at(ly_);
   int lcd_x = object.x_pos - 8;
   int lcd_y = object.y_pos - 16;
@@ -185,17 +193,15 @@ void gbemu::Ppu::WriteObjectOnCurrentLine(const Object& object) {
     unsigned lower_bit = (lower_bits >> (7 - i)) & 1;
     unsigned upper_bit = (upper_bits >> (7 - i)) & 1;
     unsigned color_id = (upper_bit << 1) | lower_bit;
-    GbObjectPalette palette = (object.attributes | (1 << 4))
-                                  ? GbObjectPalette::kObp0
-                                  : GbObjectPalette::kObp1;
+    Object::GbPalette palette = object.GetGbPalette();
     GbPixelColor color = GetGbObjectColor(color_id, palette);
     line.at(lcd_x + i) = color;
   }
 }
 
-GbPixelColor gbemu::Ppu::GetGbObjectColor(unsigned color_id,
-                                          GbObjectPalette palette) const {
-  std::uint8_t obp = palette == GbObjectPalette::kObp0 ? obp0_ : obp1_;
+GbPixelColor Ppu::GetGbObjectColor(unsigned color_id,
+                                   Object::GbPalette palette) const {
+  std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
   return static_cast<GbPixelColor>((obp >> (color_id * 2)) & 0b11);
 }
 

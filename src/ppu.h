@@ -228,6 +228,21 @@ class Ppu {
     bool operator<(const Object& rhs) const { return x_pos < rhs.x_pos; }
     // 指定のスキャンライン上で描画の対象となるか判定する
     bool IsOnScanLine(std::uint8_t ly, ObjectSize size) const;
+
+    enum class Priority {
+      kFront,  // Background/Windowより前面に出る
+      kBack    // Background/WindowのColor ID1-3に隠れる
+    };
+    enum class GbPalette { kObp0, kObp1 };
+    // attributesの各種情報の取得
+    Priority GetPriority() const {
+      return (attributes & (1 << 7)) ? Priority::kBack : Priority::kFront;
+    }
+    bool GetYFlip() const { return attributes & (1 << 6); }
+    bool GetXFlip() const { return attributes & (1 << 5); }
+    GbPalette GetGbPalette() const {
+      return (attributes & (1 << 4)) ? GbPalette::kObp1 : GbPalette::kObp0;
+    }
   };
   // OAM Scanで使用するバッファ。
   // 現在のスキャンライン上で描画の対象となるオブジェクトを
@@ -236,13 +251,14 @@ class Ppu {
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
   static constexpr auto kMaxNumOfObjectsOnScanLine = 10;
 
-  // 現在のスキャンライン上にオブジェクトを描画する。
-  void WriteObjectOnCurrentLine(const Object& object);
+  // OAM Scanでバッファに記録した全オブジェクトをスキャンライン上に描画する。
+  void WriteObjectsOnCurrentLine();
 
-  enum class GbObjectPalette { kObp0, kObp1 };
+  // 指定のオブジェクトをスキャンライン上に描画する。
+  void WriteSingleObjectOnCurrentLine(const Object& object);
 
   GbPixelColor GetGbObjectColor(unsigned color_id,
-                                GbObjectPalette palette) const;
+                                Object::GbPalette palette) const;
 };
 
 }  // namespace gbemu
