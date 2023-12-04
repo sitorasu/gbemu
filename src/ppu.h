@@ -147,9 +147,13 @@ class Ppu {
     kSingle,  // 8x8
     kDouble   // 8x16
   };
-  // 現在のオブジェクトのサイズを取得する
+  // 現在のオブジェクトのサイズ種別を取得する
   ObjectSize GetCurrentObjectSize() const {
     return (lcdc_ & (1 << 2)) ? ObjectSize::kDouble : ObjectSize::kSingle;
+  }
+  // 現在のオブジェクトの高さを取得する
+  unsigned GetCurrentObjectHeight() const {
+    return GetCurrentObjectSize() == ObjectSize::kDouble ? 16 : 8;
   }
 
   // Objectレイヤーが描画されるかどうか調べる
@@ -238,8 +242,8 @@ class Ppu {
     Priority GetPriority() const {
       return (attributes & (1 << 7)) ? Priority::kBack : Priority::kFront;
     }
-    bool GetYFlip() const { return attributes & (1 << 6); }
-    bool GetXFlip() const { return attributes & (1 << 5); }
+    bool IsYFlip() const { return attributes & (1 << 6); }
+    bool IsXFlip() const { return attributes & (1 << 5); }
     GbPalette GetGbPalette() const {
       return (attributes & (1 << 4)) ? GbPalette::kObp1 : GbPalette::kObp0;
     }

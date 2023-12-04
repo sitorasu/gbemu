@@ -180,20 +180,27 @@ void Ppu::WriteObjectsOnCurrentLine() {
 
 void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   GbLcdPixelLine& line = buffer_.at(ly_);
+  Object::GbPalette palette = object.GetGbPalette();
+  // TODO: Priorityの実装
+
+  // 描画すべき行データを取得
   int lcd_x = object.x_pos - 8;
   int lcd_y = object.y_pos - 16;
-  int tile_row_offset = ly_ - lcd_y;
+  int lcd_y_offset = ly_ - lcd_y;
+  int tile_row_offset = object.IsYFlip()
+                            ? (GetCurrentObjectHeight() - lcd_y_offset)
+                            : lcd_y_offset;
   int tile_data_address = object.tile_index * 16;
   std::uint8_t* tile_row_data =
       &vram_.at(tile_data_address + tile_row_offset * 2);
   std::uint8_t lower_bits = *tile_row_data;
   std::uint8_t upper_bits = *(tile_row_data + 1);
   for (int i = 0; i < 8; i++) {
-    // フリップがない
-    unsigned lower_bit = (lower_bits >> (7 - i)) & 1;
-    unsigned upper_bit = (upper_bits >> (7 - i)) & 1;
+    // x-flipしているなら最下位ビットから、していないなら最上位ビットから描画する
+    unsigned shift_amount = object.IsXFlip() ? i : (7 - i);
+    unsigned lower_bit = (lower_bits >> shift_amount) & 1;
+    unsigned upper_bit = (upper_bits >> shift_amount) & 1;
     unsigned color_id = (upper_bit << 1) | lower_bit;
-    Object::GbPalette palette = object.GetGbPalette();
     GbPixelColor color = GetGbObjectColor(color_id, palette);
     line.at(lcd_x + i) = color;
   }
