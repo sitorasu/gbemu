@@ -101,16 +101,16 @@ class Ppu {
   // VRAM領域の開始アドレス$8000をベースとするオフセットを得る。
   // $8000より小さいアドレスを引数に指定してはいけない。
   static std::uint16_t GetVRamAddressOffset(std::uint16_t address) {
-    return address - 0x8000;
+    return address - 0x8000U;
   }
   // OAM領域の開始アドレス$FE00をベースとするオフセットを得る。
   // $FE00より小さいアドレスを引数に指定してはいけない。
   static std::uint16_t GetOamAddressOffset(std::uint16_t address) {
-    return address - 0xFE00;
+    return address - 0xFE00U;
   }
 
   // PPUが有効化されているか調べる。
-  bool IsEnabled() const { return lcdc_ & (1 << 7); }
+  bool IsPPUEnabled() const { return lcdc_ & (1 << 7); }
 
   // Background/Windowに使用するタイルマップの区画
   enum class TileMapArea {
@@ -178,6 +178,17 @@ class Ppu {
   // PPUモードを設定する。
   // 経過サイクル数のリセットと、STATレジスタおよび割り込みフラグの更新も行う。
   void SetPpuMode(PpuMode mode);
+
+  // VRAMがアクセス可能かどうか調べる
+  bool IsVRamAccessible() const {
+    return !IsPPUEnabled() || (ppu_mode_ != PpuMode::kDrawingPixels);
+  }
+
+  // OAMがアクセス可能かどうか調べる
+  bool IsOamAccessible() const {
+    return !IsPPUEnabled() || (ppu_mode_ == PpuMode::kHBlank) ||
+           (ppu_mode_ == PpuMode::kVBlank);
+  }
 
   // LYレジスタをインクリメントする。
   // 最後の行の場合は0に戻す。

@@ -8,42 +8,35 @@
 using namespace gbemu;
 
 std::uint8_t Ppu::ReadVRam8(std::uint16_t address) const {
-  if (ppu_mode_ == PpuMode::kDrawingPixels) {
+  if (!IsVRamAccessible()) {
     return 0xFF;
   }
   return vram_.at(GetVRamAddressOffset(address));
 }
 
 void Ppu::WriteVRam8(std::uint16_t address, std::uint8_t value) {
-  if (ppu_mode_ != PpuMode::kDrawingPixels) {
+  if (IsVRamAccessible()) {
     vram_.at(GetVRamAddressOffset(address)) = value;
   }
 }
 
 std::uint8_t Ppu::ReadOam8(std::uint16_t address) const {
-  switch (ppu_mode_) {
-    case PpuMode::kOamScan:
-    case PpuMode::kDrawingPixels:
-      return 0xFF;
-    default:
-      return oam_.at(GetOamAddressOffset(address));
+  if (!IsOamAccessible()) {
+    return 0xFF;
   }
+  return oam_.at(GetOamAddressOffset(address));
 }
 
 void Ppu::WriteOam8(std::uint16_t address, std::uint8_t value) {
-  switch (ppu_mode_) {
-    case PpuMode::kOamScan:
-    case PpuMode::kDrawingPixels:
-      break;
-    default:
-      oam_.at(GetOamAddressOffset(address)) = value;
-      break;
+  if (IsOamAccessible()) {
+    oam_.at(GetOamAddressOffset(address)) = value;
   }
 }
 
 void Ppu::ScanSingleObject() {
-  // 描画可能なオブジェクトの最大数に達しているなら何もしない
+  // 描画可能なオブジェクトの最大数に達しているなら何もせずサイクルを消費
   if (objects_on_scan_line_.size() == kMaxNumOfObjectsOnScanLine) {
+    elapsed_cycles_in_current_mode_ += 2;
     return;
   }
 
@@ -60,7 +53,7 @@ void Ppu::ScanSingleObject() {
     objects_on_scan_line_.push(object);
   }
 
-  // 消費したサイクル数だけ進める
+  // サイクルを消費
   elapsed_cycles_in_current_mode_ += 2;
 }
 
@@ -77,6 +70,9 @@ void Ppu::WriteCurrentLineToBuffer() {
 // Step()が返す消費サイクル数は1か2なので、貪欲に消費しても
 // サイクル数が余ることはない。
 void Ppu::Run(unsigned tcycle) {
+  if (!IsPPUEnabled()) {
+    return;
+  }
   ASSERT(tcycle % 4 == 0, "T-cycle must be a multiple of 4");
   unsigned left_cycles = tcycle;
   while (left_cycles > 0) {

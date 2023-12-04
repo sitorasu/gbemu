@@ -10,7 +10,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/gbemu",
       "args": [
-        "${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
+        "${workspaceFolder}/test_rom/dmg-acid2.gb"
       ],
       "cwd": "${workspaceFolder}",
     }

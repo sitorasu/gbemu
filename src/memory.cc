@@ -195,7 +195,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
   } else if (InRange(address, 0xE000, 0xFE00)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
     Error("Read from $C0000-DDFF is prohibited.");
-  } else if (InRange(address, 0xFE00, 0xFDA0)) {
+  } else if (InRange(address, 0xFE00, 0xFEA0)) {
     // OAM RAMからの読み出し
     return ppu_.ReadOam8(address);
   } else if (InRange(address, 0xFEA0, 0xFF00)) {
