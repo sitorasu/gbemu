@@ -229,7 +229,7 @@ class Ppu {
     std::uint8_t x_pos;
     std::uint8_t tile_index;
     std::uint8_t attributes;
-    bool operator<(const Object& rhs) const { return x_pos < rhs.x_pos; }
+    bool operator>(const Object& rhs) const { return x_pos > rhs.x_pos; }
     // 指定のスキャンライン上で描画の対象となるか判定する
     bool IsOnScanLine(std::uint8_t ly, ObjectSize size) const;
 
@@ -251,7 +251,8 @@ class Ppu {
   // OAM Scanで使用するバッファ。
   // 現在のスキャンライン上で描画の対象となるオブジェクトを
   // X座標の小さい順に格納する。
-  std::priority_queue<Object> objects_on_scan_line_{};
+  std::priority_queue<Object, std::vector<Object>, std::greater<Object>>
+      objects_on_scan_line_{};
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
   static constexpr auto kMaxNumOfObjectsOnScanLine = 10;
 

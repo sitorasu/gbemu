@@ -138,7 +138,8 @@ void Ppu::SetPpuMode(PpuMode mode) {
   // 割り込みフラグを更新
   if (mode == PpuMode::kVBlank) {
     interrupt_.SetIfBit(InterruptSource::kVblank);
-  } else {
+  }
+  if (mode_num != 3) {
     unsigned mode_interrupt_select_bit = 1U << (mode_num + 3);
     if (stat_ & mode_interrupt_select_bit) {
       interrupt_.SetIfBit(InterruptSource::kStat);
@@ -162,18 +163,18 @@ void Ppu::IncrementLy() {
     if (stat_ & (1U << 6)) {
       interrupt_.SetIfBit(InterruptSource::kStat);
     }
+  } else {
+    stat_ &= ~(1U << 2);
   }
 }
 
 void Ppu::WriteObjectsOnCurrentLine() {
-  // LCDCでオブジェクトの描画が無効になっているなら何もしない
-  if (!IsObjectEnabled()) {
-    return;
-  }
-
   while (!objects_on_scan_line_.empty()) {
-    const Object& object = objects_on_scan_line_.top();
-    WriteSingleObjectOnCurrentLine(object);
+    if (IsObjectEnabled()) {
+      const Object& object = objects_on_scan_line_.top();
+      WriteSingleObjectOnCurrentLine(object);
+    }
+    // オブジェクトの表示が有効でも無効でも捨てることに注意（バグを作り込んだ）
     objects_on_scan_line_.pop();
   }
 }
@@ -188,7 +189,7 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   int lcd_y = object.y_pos - 16;
   int lcd_y_offset = ly_ - lcd_y;
   int tile_row_offset = object.IsYFlip()
-                            ? (GetCurrentObjectHeight() - lcd_y_offset)
+                            ? (GetCurrentObjectHeight() - 1 - lcd_y_offset)
                             : lcd_y_offset;
   int tile_data_address = object.tile_index * 16;
   std::uint8_t* tile_row_data =
