@@ -64,7 +64,7 @@ void Ppu::ScanSingleObject() {
   object.attributes = oam_.at(object_index * 4 + 3);
 
   // オブジェクトがスキャンライン上にあるならバッファに追加
-  if (object.IsOnScanLine(ly_, GetCurrentObjectSize())) {
+  if (object.IsOnScanLine(ly_, lcdc_.GetCurrentObjectSize())) {
     objects_on_scan_line_.push(object);
   }
 
@@ -81,7 +81,7 @@ void Ppu::WriteCurrentLineToBuffer() {
 // Step()が返す消費サイクル数は1か2なので、貪欲に消費しても
 // サイクル数が余ることはない。
 void Ppu::Run(unsigned tcycle) {
-  if (!IsPPUEnabled()) {
+  if (!lcdc_.IsPPUEnabled()) {
     return;
   }
   ASSERT(tcycle % 4 == 0, "T-cycle must be a multiple of 4");
@@ -147,16 +147,14 @@ void Ppu::SetPpuMode(PpuMode mode) {
   elapsed_cycles_in_current_mode_ = 0;
 
   // STATレジスタを更新
-  unsigned mode_num = static_cast<unsigned>(mode);
-  stat_ = (stat_ & ~0b11U) | mode_num;
+  stat_.SetPpuMode(mode);
 
   // 割り込みフラグを更新
   if (mode == PpuMode::kVBlank) {
     interrupt_.SetIfBit(InterruptSource::kVblank);
   }
-  if (mode_num != 3) {
-    unsigned mode_interrupt_select_bit = 1U << (mode_num + 3);
-    if (stat_ & mode_interrupt_select_bit) {
+  if (mode != PpuMode::kDrawingPixels) {
+    if (stat_.IsPpuModeInterruptEnabled(mode)) {
       interrupt_.SetIfBit(InterruptSource::kStat);
     }
   }
@@ -173,19 +171,19 @@ void Ppu::IncrementLy() {
 
   // STATレジスタを更新する
   if (lyc_ == ly_) {
-    stat_ |= (1U << 2);
+    stat_.SetLycEqualsLyBit();
     // 割り込みフラグを更新する
-    if (stat_ & (1U << 6)) {
+    if (stat_.IsLycInterruptEnabled()) {
       interrupt_.SetIfBit(InterruptSource::kStat);
     }
   } else {
-    stat_ &= ~(1U << 2);
+    stat_.ResetLycEqualsLyBit();
   }
 }
 
 void Ppu::WriteObjectsOnCurrentLine() {
   while (!objects_on_scan_line_.empty()) {
-    if (IsObjectEnabled()) {
+    if (lcdc_.IsObjectEnabled()) {
       const Object& object = objects_on_scan_line_.top();
       WriteSingleObjectOnCurrentLine(object);
     }
@@ -203,9 +201,9 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   int lcd_x = object.x_pos - 8;
   int lcd_y = object.y_pos - 16;
   int lcd_y_offset = ly_ - lcd_y;
-  int tile_row_offset = object.IsYFlip()
-                            ? (GetCurrentObjectHeight() - 1 - lcd_y_offset)
-                            : lcd_y_offset;
+  int tile_row_offset =
+      object.IsYFlip() ? (lcdc_.GetCurrentObjectHeight() - 1 - lcd_y_offset)
+                       : lcd_y_offset;
   int tile_data_address = object.tile_index * 16;
   std::uint8_t* tile_row_data =
       &vram_.at(tile_data_address + tile_row_offset * 2);

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "interrupt.h"
+#include "utils.h"
 
 namespace gbemu {
 
@@ -34,8 +35,8 @@ class Ppu {
   Ppu(Interrupt& interrupt)
       : vram_(kVRamSize), oam_(kOamSize), interrupt_(interrupt) {}
 
-  void set_lcdc(std::uint8_t value) { lcdc_ = value; }
-  void set_stat(std::uint8_t value) { stat_ = value & 0x78; }
+  void set_lcdc(std::uint8_t value) { lcdc_.data = value; }
+  void set_stat(std::uint8_t value) { stat_.Set(value); }
   void set_scy(std::uint8_t value) { scy_ = value; }
   void set_scx(std::uint8_t value) { scx_ = value; }
   void set_lyc(std::uint8_t value) { lyc_ = value; }
@@ -44,8 +45,8 @@ class Ppu {
   void set_obp1(std::uint8_t value) { obp1_ = value; }
   void set_wy(std::uint8_t value) { wy_ = value; }
   void set_wx(std::uint8_t value) { wx_ = value; }
-  std::uint8_t lcdc() const { return lcdc_; }
-  std::uint8_t stat() const { return stat_; }
+  std::uint8_t lcdc() const { return lcdc_.data; }
+  std::uint8_t stat() const { return stat_.Get(); }
   std::uint8_t scy() const { return scy_; }
   std::uint8_t scx() const { return scx_; }
   std::uint8_t ly() const { return ly_; }
@@ -101,55 +102,105 @@ class Ppu {
   // VBlankも含めたScan Lineの総数
   static constexpr auto kScanLineNum = 154;
 
-  // PPUが有効化されているか調べる。
-  bool IsPPUEnabled() const { return lcdc_ & (1 << 7); }
-
   // Background/Windowに使用するタイルマップの区画
   enum class TileMapArea {
     kLowerArea,  // $9800-9BFF
     kUpperArea   // $9C00-9FFF
   };
-  // 現在のWindowのタイルマップの区画を取得する
-  TileMapArea GetCurrentWindowTileMapArea() const {
-    return lcdc_ & (1 << 6) ? TileMapArea::kUpperArea : TileMapArea::kLowerArea;
-  }
-  // 現在のBackgroundのタイルマップの区画を取得する
-  TileMapArea GetCurrentBackgroundTileMapArea() const {
-    return lcdc_ & (1 << 3) ? TileMapArea::kUpperArea : TileMapArea::kLowerArea;
-  }
-
-  // Windowレイヤーが描画されるかどうか調べる
-  bool IsWindowEnabled() const { return (lcdc_ & 1) && (lcdc_ & (1 << 5)); }
-
-  // Backgroundレイヤーが描画されるかどうか調べる
-  bool IsBackgroundEnabled() const { return lcdc_ & 1; }
 
   // Background/Windowに使用するタイルデータへのアドレッシングモード
   enum class TileDataAddressingMode {
     kUpperBlocksSigned,   // $9000 + signed 8-bit offset
     kLowerBlocksUnsigned  // $8000 + unsigned 8-bit offset
   };
-  // Background/Windowに使用するタイルデータへのアドレッシングモードを取得する
-  TileDataAddressingMode GetCurrentTileDataAddressingMode() const {
-    return (lcdc_ & (1 << 4)) ? TileDataAddressingMode::kLowerBlocksUnsigned
-                              : TileDataAddressingMode::kUpperBlocksSigned;
-  }
 
   enum class ObjectSize {
     kSingle,  // 8x8
     kDouble   // 8x16
   };
-  // 現在のオブジェクトのサイズ種別を取得する
-  ObjectSize GetCurrentObjectSize() const {
-    return (lcdc_ & (1 << 2)) ? ObjectSize::kDouble : ObjectSize::kSingle;
-  }
-  // 現在のオブジェクトの高さを取得する
-  unsigned GetCurrentObjectHeight() const {
-    return GetCurrentObjectSize() == ObjectSize::kDouble ? 16 : 8;
-  }
 
-  // Objectレイヤーが描画されるかどうか調べる
-  bool IsObjectEnabled() const { return lcdc_ & (1 << 1); }
+  enum class PpuMode {
+    kHBlank = 0,
+    kVBlank = 1,
+    kOamScan = 2,
+    kDrawingPixels = 3
+  };
+
+  // LCDCレジスタ
+  struct Lcdc {
+    std::uint8_t data{};
+
+    // PPUが有効化されているか調べる。
+    bool IsPPUEnabled() const { return data & (1 << 7); }
+
+    // 現在のWindowのタイルマップの区画を取得する
+    TileMapArea GetCurrentWindowTileMapArea() const {
+      return data & (1 << 6) ? TileMapArea::kUpperArea
+                             : TileMapArea::kLowerArea;
+    }
+
+    // 現在のBackgroundのタイルマップの区画を取得する
+    TileMapArea GetCurrentBackgroundTileMapArea() const {
+      return data & (1 << 3) ? TileMapArea::kUpperArea
+                             : TileMapArea::kLowerArea;
+    }
+
+    // Windowレイヤーが描画されるかどうか調べる
+    bool IsWindowEnabled() const { return (data & 1) && (data & (1 << 5)); }
+
+    // Backgroundレイヤーが描画されるかどうか調べる
+    bool IsBackgroundEnabled() const { return data & 1; }
+
+    // Background/Windowに使用するタイルデータへのアドレッシングモードを取得する
+    TileDataAddressingMode GetCurrentTileDataAddressingMode() const {
+      return (data & (1 << 4)) ? TileDataAddressingMode::kLowerBlocksUnsigned
+                               : TileDataAddressingMode::kUpperBlocksSigned;
+    }
+
+    // 現在のオブジェクトのサイズ種別を取得する
+    ObjectSize GetCurrentObjectSize() const {
+      return (data & (1 << 2)) ? ObjectSize::kDouble : ObjectSize::kSingle;
+    }
+
+    // 現在のオブジェクトの高さを取得する
+    unsigned GetCurrentObjectHeight() const {
+      return GetCurrentObjectSize() == ObjectSize::kDouble ? 16 : 8;
+    }
+
+    // Objectレイヤーが描画されるかどうか調べる
+    bool IsObjectEnabled() const { return data & (1 << 1); }
+  };
+
+  // STATレジスタ
+  struct Stat {
+   public:
+    // レジスタに値をセットする
+    void Set(std::uint8_t value) { data_ = (data_ & ~0x78) | (value & 0x78); }
+
+    // レジスタの値を取得する
+    std::uint8_t Get() const { return data_; }
+
+    bool IsLycInterruptEnabled() const { return data_ & (1 << 6); }
+
+    bool IsPpuModeInterruptEnabled(PpuMode mode) const {
+      ASSERT(mode != PpuMode::kDrawingPixels,
+             "STAT does not have mode 3 interrupt selection");
+      std::uint8_t mode_num = static_cast<std::uint8_t>(mode);
+      return data_ & (1 << (mode_num + 3));
+    }
+
+    void SetLycEqualsLyBit() { data_ |= (1 << 2); }
+
+    void ResetLycEqualsLyBit() { data_ &= ~(1 << 2); }
+
+    void SetPpuMode(PpuMode mode) {
+      std::uint8_t mode_num = static_cast<std::uint8_t>(mode);
+      data_ = (data_ & ~0b11) | mode_num;
+    }
+
+   private:
+    std::uint8_t data_;
+  };
 
   // OAMのオブジェクトを1つスキャンし、2サイクル進める。
   void ScanSingleObject();
@@ -168,7 +219,6 @@ class Ppu {
   //     実装が大変なので単純化する。
   unsigned Step();
 
-  enum class PpuMode { kHBlank, kVBlank, kOamScan, kDrawingPixels };
   PpuMode ppu_mode_{PpuMode::kOamScan};
 
   // PPUモードを設定する。
@@ -177,12 +227,12 @@ class Ppu {
 
   // VRAMがアクセス可能かどうか調べる
   bool IsVRamAccessible() const {
-    return !IsPPUEnabled() || (ppu_mode_ != PpuMode::kDrawingPixels);
+    return !lcdc_.IsPPUEnabled() || (ppu_mode_ != PpuMode::kDrawingPixels);
   }
 
   // OAMがアクセス可能かどうか調べる
   bool IsOamAccessible() const {
-    return !IsPPUEnabled() || (ppu_mode_ == PpuMode::kHBlank) ||
+    return !lcdc_.IsPPUEnabled() || (ppu_mode_ == PpuMode::kHBlank) ||
            (ppu_mode_ == PpuMode::kVBlank);
   }
 
@@ -195,8 +245,8 @@ class Ppu {
   // VBlankでは1行ごとにリセットされる。
   unsigned elapsed_cycles_in_current_mode_{};
 
-  std::uint8_t lcdc_{};
-  std::uint8_t stat_{};
+  Lcdc lcdc_{};
+  Stat stat_{};
   std::uint8_t scy_{};
   std::uint8_t scx_{};
   std::uint8_t ly_{};
