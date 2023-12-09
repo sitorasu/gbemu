@@ -9,6 +9,7 @@
 #include "interrupt.h"
 #include "ppu.h"
 #include "timer.h"
+#include "utils.h"
 
 namespace gbemu {
 
@@ -42,8 +43,6 @@ class Memory {
     void Run(unsigned mcycles);
 
    private:
-    static constexpr std::uint16_t kOamStartAddress = 0xFE00;
-    static constexpr std::uint16_t kOamEndAddress = 0xFEA0;
     Memory& memory_;
     std::uint8_t dma_{};
     bool during_transfer_{};

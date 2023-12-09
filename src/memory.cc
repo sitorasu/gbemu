@@ -180,31 +180,31 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
 }
 
 uint8_t Memory::Read8(std::uint16_t address) const {
-  if (InRange(address, 0, 0x8000)) {
+  if (InRomRange(address)) {
     // カートリッジからの読み出し
     return cartridge_->Read8(address);
-  } else if (InRange(address, 0x8000, 0xA000)) {
+  } else if (InVRamRange(address)) {
     // VRAMからの読み出し
     return ppu_.ReadVRam8(address);
-  } else if (InRange(address, 0xA000, 0xC000)) {
+  } else if (InExternalRamRange(address)) {
     // External RAMからの読み出し
     return cartridge_->Read8(address);
-  } else if (InRange(address, 0xC000, 0xE000)) {
+  } else if (InInternalRamRange(address)) {
     // Internal RAMからの読み出し
     return internal_ram_.at(address & 0x1FFF);
-  } else if (InRange(address, 0xE000, 0xFE00)) {
+  } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    Error("Read from $C0000-DDFF is prohibited.");
-  } else if (InRange(address, 0xFE00, 0xFEA0)) {
+    Error("Read from $C000-DDFF is prohibited.");
+  } else if (InOamRange(address)) {
     // OAM RAMからの読み出し
     return ppu_.ReadOam8(address);
-  } else if (InRange(address, 0xFEA0, 0xFF00)) {
+  } else if (InNotUsableAreaRange(address)) {
     // アクセス禁止区間
     Error("Read from $FEA0-FEFF is prohibited.");
-  } else if (InRange(address, 0xFF00, 0xFF80)) {
+  } else if (InIORegistersRange(address)) {
     // I/Oレジスタからの読み出し
     return ReadIORegister(address);
-  } else if (InRange(address, 0xFF80, 0xFFFE)) {
+  } else if (InHRamRange(address)) {
     // HRAMからの読み出し
     return h_ram_.at(address & 0x007F);
   } else {
@@ -232,31 +232,31 @@ std::vector<std::uint8_t> Memory::ReadBytes(std::uint16_t address,
 }
 
 void Memory::Write8(std::uint16_t address, std::uint8_t value) {
-  if (InRange(address, 0, 0x8000)) {
+  if (InRomRange(address)) {
     // カートリッジへの書き込み
     cartridge_->Write8(address, value);
-  } else if (InRange(address, 0x8000, 0xA000)) {
+  } else if (InVRamRange(address)) {
     // VRAMへの書き込み
     ppu_.WriteVRam8(address, value);
-  } else if (InRange(address, 0xA000, 0xC000)) {
+  } else if (InExternalRamRange(address)) {
     // External RAMへの書き込み
     cartridge_->Write8(address, value);
-  } else if (InRange(address, 0xC000, 0xE000)) {
+  } else if (InInternalRamRange(address)) {
     // Internal RAMへの書き込み
     internal_ram_.at(address & 0x1FFF) = value;
-  } else if (InRange(address, 0xE000, 0xFE00)) {
+  } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    Error("Write to $C0000-DDFF is prohibited.");
-  } else if (InRange(address, 0xFE00, 0xFEA0)) {
+    Error("Write to $C000-DDFF is prohibited.");
+  } else if (InOamRange(address)) {
     // OAM RAMへの書き込み
     ppu_.WriteOam8(address, value);
-  } else if (InRange(address, 0xFEA0, 0xFF00)) {
+  } else if (InNotUsableAreaRange(address)) {
     // アクセス禁止区間
     Error("Write to $FEA0-FEFF is prohibited.");
-  } else if (InRange(address, 0xFF00, 0xFF80)) {
+  } else if (InIORegistersRange(address)) {
     // I/Oレジスタへの書き込み
     WriteIORegister(address, value);
-  } else if (InRange(address, 0xFF80, 0xFFFE)) {
+  } else if (InHRamRange(address)) {
     // HRAMへの書き込み
     h_ram_.at(address & 0x007F) = value;
   } else {

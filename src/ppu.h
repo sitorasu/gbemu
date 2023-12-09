@@ -101,17 +101,6 @@ class Ppu {
   // VBlankも含めたScan Lineの総数
   static constexpr auto kScanLineNum = 154;
 
-  // VRAM領域の開始アドレス$8000をベースとするオフセットを得る。
-  // $8000より小さいアドレスを引数に指定してはいけない。
-  static std::uint16_t GetVRamAddressOffset(std::uint16_t address) {
-    return address - 0x8000U;
-  }
-  // OAM領域の開始アドレス$FE00をベースとするオフセットを得る。
-  // $FE00より小さいアドレスを引数に指定してはいけない。
-  static std::uint16_t GetOamAddressOffset(std::uint16_t address) {
-    return address - 0xFE00U;
-  }
-
   // PPUが有効化されているか調べる。
   bool IsPPUEnabled() const { return lcdc_ & (1 << 7); }
 

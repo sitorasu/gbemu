@@ -7,6 +7,21 @@
 
 using namespace gbemu;
 
+namespace {
+
+// VRAM領域の開始アドレス$8000をベースとするオフセットを得る。
+// $8000より小さいアドレスを引数に指定してはいけない。
+static std::uint16_t GetVRamAddressOffset(std::uint16_t address) {
+  return address - kVRamStartAddress;
+}
+// OAM領域の開始アドレス$FE00をベースとするオフセットを得る。
+// $FE00より小さいアドレスを引数に指定してはいけない。
+static std::uint16_t GetOamAddressOffset(std::uint16_t address) {
+  return address - kOamStartAddress;
+}
+
+}  // namespace
+
 std::uint8_t Ppu::ReadVRam8(std::uint16_t address) const {
   if (!IsVRamAccessible()) {
     return 0xFF;
