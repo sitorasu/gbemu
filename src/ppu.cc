@@ -202,15 +202,15 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
     unsigned lower_bit = (lower_bits >> shift_amount) & 1;
     unsigned upper_bit = (upper_bits >> shift_amount) & 1;
     unsigned color_id = (upper_bit << 1) | lower_bit;
-    GbPixelColor color = GetGbObjectColor(color_id, palette);
+    gb::lcd::Color color = GetGbObjectColor(color_id, palette);
     line.at(lcd_x + i) = color;
   }
 }
 
-GbPixelColor Ppu::GetGbObjectColor(unsigned color_id,
-                                   Object::GbPalette palette) const {
+gb::lcd::Color Ppu::GetGbObjectColor(unsigned color_id,
+                                     Object::GbPalette palette) const {
   std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
-  return static_cast<GbPixelColor>((obp >> (color_id * 2)) & 0b11);
+  return static_cast<gb::lcd::Color>((obp >> (color_id * 2)) & 0b11);
 }
 
 bool Ppu::Object::IsOnScanLine(std::uint8_t ly, Ppu::ObjectSize size) const {

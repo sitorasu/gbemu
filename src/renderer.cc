@@ -52,10 +52,10 @@ Renderer::Renderer(int screen_scale)
   pixel_size_ = drawable_width / kLcdHorizontalPixelNum;
 
   // ゲームボーイの4色の設定
-  colors_[kWhite] = {232, 232, 232, 255};
-  colors_[kLightGray] = {160, 160, 160, 255};
-  colors_[kDarkGray] = {88, 88, 88, 255};
-  colors_[kBlack] = {16, 16, 16, 255};
+  colors_[gb::lcd::kWhite] = {232, 232, 232, 255};
+  colors_[gb::lcd::kLightGray] = {160, 160, 160, 255};
+  colors_[gb::lcd::kDarkGray] = {88, 88, 88, 255};
+  colors_[gb::lcd::kBlack] = {16, 16, 16, 255};
 }
 
 Renderer::~Renderer() {
