@@ -10,25 +10,24 @@
 
 namespace gbemu {
 
-namespace gb {
 namespace lcd {
-enum Color {
+
+enum GbLcdColor {
   kWhite = 0,
   kLightGray = 1,
   kDarkGray = 2,
   kBlack = 3,
   kColorNum,
 };
-}
-}  // namespace gb
 
-constexpr auto kLcdHorizontalPixelNum = 160;
-constexpr auto kLcdVerticalPixelNum = 144;
-constexpr auto kLcdTotalPixelNum =
-    kLcdHorizontalPixelNum * kLcdVerticalPixelNum;
+constexpr auto kWidth = 160;
+constexpr auto kHeight = 144;
+constexpr auto kTotalPixelNum = kWidth * kHeight;
 
-using GbLcdPixelLine = std::array<gb::lcd::Color, kLcdHorizontalPixelNum>;
-using GbLcdPixelMatrix = std::array<GbLcdPixelLine, kLcdVerticalPixelNum>;
+}  // namespace lcd
+
+using GbLcdPixelRow = std::array<lcd::GbLcdColor, lcd::kWidth>;
+using GbLcdPixelMatrix = std::array<GbLcdPixelRow, lcd::kHeight>;
 
 class Ppu {
  public:
@@ -266,8 +265,8 @@ class Ppu {
   // 指定のオブジェクトをスキャンライン上に描画する。
   void WriteSingleObjectOnCurrentLine(const Object& object);
 
-  gb::lcd::Color GetGbObjectColor(unsigned color_id,
-                                  Object::GbPalette palette) const;
+  lcd::GbLcdColor GetGbObjectColor(unsigned color_id,
+                                   Object::GbPalette palette) const;
 };
 
 }  // namespace gbemu

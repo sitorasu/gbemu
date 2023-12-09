@@ -11,15 +11,15 @@ using namespace gbemu;
 
 namespace {
 
-SDL_Color LcdColorToSdlColor(gb::lcd::Color color) {
+SDL_Color LcdColorToSdlColor(lcd::GbLcdColor color) {
   switch (color) {
-    case gb::lcd::kWhite:
+    case lcd::kWhite:
       return {232, 232, 232, 255};
-    case gb::lcd::kLightGray:
+    case lcd::kLightGray:
       return {160, 160, 160, 255};
-    case gb::lcd::kDarkGray:
+    case lcd::kDarkGray:
       return {88, 88, 88, 255};
-    case gb::lcd::kBlack:
+    case lcd::kBlack:
       return {16, 16, 16, 255};
     default:
       UNREACHABLE("Invalid LCD Color: %d", color);
@@ -30,8 +30,8 @@ SDL_Color LcdColorToSdlColor(gb::lcd::Color color) {
 
 Renderer::Renderer(int screen_scale)
     : screen_scale_(screen_scale <= 0 ? 1 : screen_scale), vsync_(false) {
-  int screen_width = kLcdHorizontalPixelNum * screen_scale_;
-  int screen_height = kLcdVerticalPixelNum * screen_scale_;
+  int screen_width = lcd::kWidth * screen_scale_;
+  int screen_height = lcd::kHeight * screen_scale_;
   window_ = SDL_CreateWindow(
       "GBEMU", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen_width,
       screen_height, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -62,13 +62,12 @@ Renderer::Renderer(int screen_scale)
   // 描画可能領域を160x144の格子に分割するには
   // 格子の1辺を何ピクセルから構成すればよいか調べる。
   // 格子に分割できない、あるいは格子が正方形とならない場合はエラーとする。
-  if ((drawable_width % kLcdHorizontalPixelNum) != 0 ||
-      (drawable_height % kLcdVerticalPixelNum) != 0 ||
-      (drawable_width / kLcdHorizontalPixelNum) !=
-          (drawable_height / kLcdVerticalPixelNum)) {
+  if ((drawable_width % lcd::kWidth) != 0 ||
+      (drawable_height % lcd::kHeight) != 0 ||
+      (drawable_width / lcd::kWidth) != (drawable_height / lcd::kHeight)) {
     Error("Not supported scaling rate");
   }
-  pixel_size_ = drawable_width / kLcdHorizontalPixelNum;
+  pixel_size_ = drawable_width / lcd::kWidth;
 }
 
 Renderer::~Renderer() {
@@ -79,8 +78,8 @@ Renderer::~Renderer() {
 void Renderer::Render(const GbLcdPixelMatrix& buffer) const {
   SDL_SetRenderDrawColor(renderer_, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderClear(renderer_);
-  for (int i = 0; i < kLcdVerticalPixelNum; i++) {
-    for (int j = 0; j < kLcdHorizontalPixelNum; j++) {
+  for (int i = 0; i < lcd::kHeight; i++) {
+    for (int j = 0; j < lcd::kWidth; j++) {
       SDL_Color color = LcdColorToSdlColor(buffer[i][j]);
       SDL_Rect rect;
       rect.x = j * pixel_size_;

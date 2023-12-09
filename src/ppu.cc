@@ -99,7 +99,7 @@ unsigned Ppu::Step() {
     case PpuMode::kHBlank:
       elapsed_cycles_in_current_mode_++;
       if (elapsed_cycles_in_current_mode_ == kHBlankDuration) {
-        if ((ly_ + 1) == kLcdVerticalPixelNum) {
+        if ((ly_ + 1) == lcd::kHeight) {
           SetPpuMode(PpuMode::kVBlank);
           is_buffer_ready_ = true;
         } else {
@@ -180,7 +180,7 @@ void Ppu::WriteObjectsOnCurrentLine() {
 }
 
 void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
-  GbLcdPixelLine& line = buffer_.at(ly_);
+  GbLcdPixelRow& line = buffer_.at(ly_);
   Object::GbPalette palette = object.GetGbPalette();
   // TODO: Priorityの実装
 
@@ -202,15 +202,15 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
     unsigned lower_bit = (lower_bits >> shift_amount) & 1;
     unsigned upper_bit = (upper_bits >> shift_amount) & 1;
     unsigned color_id = (upper_bit << 1) | lower_bit;
-    gb::lcd::Color color = GetGbObjectColor(color_id, palette);
+    lcd::GbLcdColor color = GetGbObjectColor(color_id, palette);
     line.at(lcd_x + i) = color;
   }
 }
 
-gb::lcd::Color Ppu::GetGbObjectColor(unsigned color_id,
-                                     Object::GbPalette palette) const {
+lcd::GbLcdColor Ppu::GetGbObjectColor(unsigned color_id,
+                                      Object::GbPalette palette) const {
   std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
-  return static_cast<gb::lcd::Color>((obp >> (color_id * 2)) & 0b11);
+  return static_cast<lcd::GbLcdColor>((obp >> (color_id * 2)) & 0b11);
 }
 
 bool Ppu::Object::IsOnScanLine(std::uint8_t ly, Ppu::ObjectSize size) const {
