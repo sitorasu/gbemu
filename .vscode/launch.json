@@ -10,7 +10,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/gbemu",
       "args": [
-        "--debug",
+        //"--debug",
         "${workspaceFolder}/test_rom/dmg-acid2.gb"
       ],
       "cwd": "${workspaceFolder}",

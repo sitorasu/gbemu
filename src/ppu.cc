@@ -204,7 +204,10 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   int tile_row_offset =
       object.IsYFlip() ? (lcdc_.GetCurrentObjectHeight() - 1 - lcd_y_offset)
                        : lcd_y_offset;
-  int tile_data_address = object.tile_index * 16;
+  int upper_tile_index = lcdc_.GetCurrentObjectSize() == ObjectSize::kDouble
+                             ? object.tile_index & 0xFE
+                             : object.tile_index;
+  int tile_data_address = upper_tile_index * 16;
   std::uint8_t* tile_row_data =
       &vram_.at(tile_data_address + tile_row_offset * 2);
   std::uint8_t lower_bits = *tile_row_data;
