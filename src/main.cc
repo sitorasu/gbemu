@@ -107,14 +107,14 @@ int main(int argc, char* argv[]) {
       while (!PollQuit()) {
         gb.Step();
         auto& buffer = gb.GetBuffer();
-        renderer.RenderLCDPixels(buffer);
+        renderer.Render(buffer);
       }
     } else {
       // 垂直同期オフ
       std::cout << "vsync off" << std::endl;
       while (!PollQuit()) {
         gb.Step();
-        renderer.RenderLCDPixels(gb.GetBuffer());
+        renderer.Render(gb.GetBuffer());
 
         // 次のフレーム開始時間まで待つ
         WaitForNextFrame();

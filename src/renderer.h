@@ -16,7 +16,7 @@ class Renderer {
  public:
   Renderer(int screen_scale = 1);
   ~Renderer();
-  void RenderLCDPixels(const GbLcdPixelMatrix& pixels) const;
+  void Render(const GbLcdPixelMatrix& pixels) const;
   bool vsync() { return vsync_; }
 
  private:
@@ -24,7 +24,6 @@ class Renderer {
   int pixel_size_;  // ゲームボーイのLCDの1ピクセルを、1辺何ピクセルの正方形で表現するか
                     // このピクセル数はHiDPIかどうかに関係なくディスプレイの実際のピクセル数を指す
   bool vsync_;      // 垂直同期
-  SDL_Color colors_[gb::lcd::kColorNum];  // enumから実際の色への対応
   SDL_Window* window_;
   SDL_Renderer* renderer_;
 };

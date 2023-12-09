@@ -9,6 +9,25 @@
 
 using namespace gbemu;
 
+namespace {
+
+SDL_Color LcdColorToSdlColor(gb::lcd::Color color) {
+  switch (color) {
+    case gb::lcd::kWhite:
+      return {232, 232, 232, 255};
+    case gb::lcd::kLightGray:
+      return {160, 160, 160, 255};
+    case gb::lcd::kDarkGray:
+      return {88, 88, 88, 255};
+    case gb::lcd::kBlack:
+      return {16, 16, 16, 255};
+    default:
+      UNREACHABLE("Invalid LCD Color: %d", color);
+  }
+}
+
+};  // namespace
+
 Renderer::Renderer(int screen_scale)
     : screen_scale_(screen_scale <= 0 ? 1 : screen_scale), vsync_(false) {
   int screen_width = kLcdHorizontalPixelNum * screen_scale_;
@@ -50,12 +69,6 @@ Renderer::Renderer(int screen_scale)
     Error("Not supported scaling rate");
   }
   pixel_size_ = drawable_width / kLcdHorizontalPixelNum;
-
-  // ゲームボーイの4色の設定
-  colors_[gb::lcd::kWhite] = {232, 232, 232, 255};
-  colors_[gb::lcd::kLightGray] = {160, 160, 160, 255};
-  colors_[gb::lcd::kDarkGray] = {88, 88, 88, 255};
-  colors_[gb::lcd::kBlack] = {16, 16, 16, 255};
 }
 
 Renderer::~Renderer() {
@@ -63,12 +76,12 @@ Renderer::~Renderer() {
   SDL_DestroyWindow(window_);
 }
 
-void Renderer::RenderLCDPixels(const GbLcdPixelMatrix& pixels) const {
+void Renderer::Render(const GbLcdPixelMatrix& buffer) const {
   SDL_SetRenderDrawColor(renderer_, 0xFF, 0xFF, 0xFF, 0xFF);
   SDL_RenderClear(renderer_);
   for (int i = 0; i < kLcdVerticalPixelNum; i++) {
     for (int j = 0; j < kLcdHorizontalPixelNum; j++) {
-      SDL_Color color = colors_[pixels[i][j]];
+      SDL_Color color = LcdColorToSdlColor(buffer[i][j]);
       SDL_Rect rect;
       rect.x = j * pixel_size_;
       rect.y = i * pixel_size_;
