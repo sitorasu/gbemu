@@ -50,13 +50,16 @@ void Ppu::WriteOam8(std::uint16_t address, std::uint8_t value) {
 
 void Ppu::ScanSingleObject() {
   // 描画可能なオブジェクトの最大数に達しているなら何もせずサイクルを消費
-  if (objects_on_scan_line_.size() == kMaxNumOfObjectsOnScanLine) {
-    elapsed_cycles_in_current_mode_ += 2;
+  if (objects_on_scan_line_.size() == kMaxNumOfObjectsOnScanline) {
     return;
   }
 
   // OAMからオブジェクトを取得
-  int object_index = elapsed_cycles_in_current_mode_ / 2;
+  unsigned elapsed_cycles_in_oam_scan =
+      elapsed_cycles_in_frame_ % kScanlineDuration;
+  ASSERT(elapsed_cycles_in_oam_scan < kOamScanDuration,
+         "This function must be called within OAM Scan.");
+  int object_index = elapsed_cycles_in_oam_scan / 2;
   Object object;
   object.y_pos = oam_.at(object_index * 4);
   object.x_pos = oam_.at(object_index * 4 + 1);
@@ -64,12 +67,9 @@ void Ppu::ScanSingleObject() {
   object.attributes = oam_.at(object_index * 4 + 3);
 
   // オブジェクトがスキャンライン上にあるならバッファに追加
-  if (object.IsOnScanLine(ly_, lcdc_.GetCurrentObjectSize())) {
+  if (object.IsOnScanline(ly_, lcdc_.GetCurrentObjectSize())) {
     objects_on_scan_line_.push(object);
   }
-
-  // サイクルを消費
-  elapsed_cycles_in_current_mode_ += 2;
 }
 
 void Ppu::WriteCurrentLineToBuffer() {
@@ -95,90 +95,80 @@ void Ppu::Run(unsigned tcycle) {
 }
 
 unsigned Ppu::Step() {
+  unsigned elapsed;
+
+  // モード固有の処理を行い、消費したサイクル数を求める
   switch (ppu_mode_) {
     case PpuMode::kOamScan:
       ScanSingleObject();
-      if (elapsed_cycles_in_current_mode_ == kOamScanDuration) {
-        SetPpuMode(PpuMode::kDrawingPixels);
-      }
-      return 2;
-    case PpuMode::kDrawingPixels:
-      if (elapsed_cycles_in_current_mode_ == 0) {
+      elapsed = 2;
+      break;
+    case PpuMode::kDrawingPixels: {
+      unsigned elapsed_cycles_in_line =
+          elapsed_cycles_in_frame_ % kScanlineDuration;
+      if (elapsed_cycles_in_line == kOamScanDuration) {
         WriteCurrentLineToBuffer();
       }
-      elapsed_cycles_in_current_mode_++;
-      if (elapsed_cycles_in_current_mode_ == kDrawingPixelsDuration) {
-        SetPpuMode(PpuMode::kHBlank);
-      }
-      return 1;
-    case PpuMode::kHBlank:
-      elapsed_cycles_in_current_mode_++;
-      if (elapsed_cycles_in_current_mode_ == kHBlankDuration) {
-        if ((ly_ + 1) == lcd::kHeight) {
-          SetPpuMode(PpuMode::kVBlank);
-          is_buffer_ready_ = true;
-        } else {
-          SetPpuMode(PpuMode::kOamScan);
-        }
-        IncrementLy();
-      }
-      return 1;
-    case PpuMode::kVBlank:
-      elapsed_cycles_in_current_mode_++;
-      if (elapsed_cycles_in_current_mode_ == kVBlankDuration) {
-        if ((ly_ + 1) == kScanLineNum) {
-          SetPpuMode(PpuMode::kOamScan);
-          is_buffer_ready_ = false;
-        } else {
-          // 最後の行に達するまではVBlankのまま
-          elapsed_cycles_in_current_mode_ = 0;
-        }
-        IncrementLy();
-      }
-      return 1;
-  }
-}
-
-void Ppu::SetPpuMode(PpuMode mode) {
-  // PPUモードを設定
-  ppu_mode_ = mode;
-
-  // 経過サイクル数をリセット
-  elapsed_cycles_in_current_mode_ = 0;
-
-  // STATレジスタを更新
-  stat_.SetPpuMode(mode);
-
-  // 割り込みフラグを更新
-  if (mode == PpuMode::kVBlank) {
-    interrupt_.SetIfBit(InterruptSource::kVblank);
-  }
-  if (mode != PpuMode::kDrawingPixels) {
-    if (stat_.IsPpuModeInterruptEnabled(mode)) {
-      interrupt_.SetIfBit(InterruptSource::kStat);
+      elapsed = 1;
+      break;
     }
-  }
-}
-
-void Ppu::IncrementLy() {
-  // LYをインクリメントする
-  ly_++;
-
-  // 最後の行の場合は0に戻す
-  if (ly_ == kScanLineNum) {
-    ly_ = 0;
+    default:
+      elapsed = 1;
+      break;
   }
 
-  // STATレジスタを更新する
+  // サイクルを消費する
+  elapsed_cycles_in_frame_ += elapsed;
+  elapsed_cycles_in_frame_ %= kFrameDuration;
+
+  unsigned elapsed_cycles_in_line =
+      elapsed_cycles_in_frame_ % kScanlineDuration;
+
+  // LYを更新する
+  if (elapsed_cycles_in_line == 0) {
+    ly_ = (ly_ + 1) % kScanlineNum;
+  }
+
+  // モードを更新する
+  if (ly_ < lcd::kHeight) {
+    if (elapsed_cycles_in_line == 0) {
+      ppu_mode_ = PpuMode::kOamScan;
+    } else if (elapsed_cycles_in_line == kOamScanDuration) {
+      ppu_mode_ = PpuMode::kDrawingPixels;
+    } else if (elapsed_cycles_in_line ==
+               (kOamScanDuration + kDrawingPixelsDuration)) {
+      ppu_mode_ = PpuMode::kHBlank;
+    }
+  } else if (ly_ == lcd::kHeight) {
+    ppu_mode_ = PpuMode::kVBlank;
+
+    // VBlankに入ったらバッファの準備完了フラグを立てる
+    is_buffer_ready_ = true;
+  }
+
+  // STATを更新する
   if (lyc_ == ly_) {
     stat_.SetLycEqualsLyBit();
-    // 割り込みフラグを更新する
-    if (stat_.IsLycInterruptEnabled()) {
-      interrupt_.SetIfBit(InterruptSource::kStat);
-    }
   } else {
     stat_.ResetLycEqualsLyBit();
   }
+  stat_.SetPpuMode(ppu_mode_);
+
+  // 割り込みフラグを立てる
+  bool lyc_equals_ly_interrupt = (lyc_ == ly_) && stat_.IsLycInterruptEnabled();
+  bool ppu_mode_interrupt = (ppu_mode_ != PpuMode::kDrawingPixels) &&
+                            stat_.IsPpuModeInterruptEnabled(ppu_mode_);
+  bool stat_interrupt = lyc_equals_ly_interrupt || ppu_mode_interrupt;
+  bool is_rising = !stat_interrupt_wire_ && stat_interrupt;
+  if (is_rising) {
+    interrupt_.SetIfBit(InterruptSource::kStat);
+  }
+  stat_interrupt_wire_ = stat_interrupt;
+  if (ppu_mode_ == PpuMode::kVBlank) {
+    interrupt_.SetIfBit(InterruptSource::kVblank);
+  }
+
+  return elapsed;
 }
 
 void Ppu::WriteObjectsOnCurrentLine() {
@@ -229,7 +219,7 @@ lcd::GbLcdColor Ppu::GetGbObjectColor(unsigned color_id,
   return static_cast<lcd::GbLcdColor>((obp >> (color_id * 2)) & 0b11);
 }
 
-bool Ppu::Object::IsOnScanLine(std::uint8_t ly, Ppu::ObjectSize size) const {
+bool Ppu::Object::IsOnScanline(std::uint8_t ly, Ppu::ObjectSize size) const {
   unsigned height = size == ObjectSize::kSingle ? 8 : 16;
   return (x_pos > 0) && (ly + 16 >= y_pos) && (ly + 16 < y_pos + height);
 }

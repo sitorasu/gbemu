@@ -93,14 +93,13 @@ class Ppu {
   // 各モードの長さ（サイクル数）。
   // DrawingPixelsとHBlankの長さは実際には一定ではないが、
   // 実装を単純にするため一定とする。
-  // VBlankは1行区切りとする。
+  static constexpr auto kScanlineDuration = 456;
   static constexpr auto kOamScanDuration = 80;
   static constexpr auto kDrawingPixelsDuration = 172;
   static constexpr auto kHBlankDuration = 204;
-  static constexpr auto kVBlankDuration = 456;
 
-  // VBlankも含めたScan Lineの総数
-  static constexpr auto kScanLineNum = 154;
+  static constexpr auto kScanlineNum = 154;
+  static constexpr auto kFrameDuration = kScanlineDuration * kScanlineNum;
 
   // Background/Windowに使用するタイルマップの区画
   enum class TileMapArea {
@@ -190,7 +189,6 @@ class Ppu {
     }
 
     void SetLycEqualsLyBit() { data_ |= (1 << 2); }
-
     void ResetLycEqualsLyBit() { data_ &= ~(1 << 2); }
 
     void SetPpuMode(PpuMode mode) {
@@ -202,7 +200,7 @@ class Ppu {
     std::uint8_t data_;
   };
 
-  // OAMのオブジェクトを1つスキャンし、2サイクル進める。
+  // OAMのオブジェクトを1つスキャンする。
   void ScanSingleObject();
 
   // 現在の行をバッファに書き込む
@@ -221,10 +219,6 @@ class Ppu {
 
   PpuMode ppu_mode_{PpuMode::kOamScan};
 
-  // PPUモードを設定する。
-  // 経過サイクル数のリセットと、STATレジスタおよび割り込みフラグの更新も行う。
-  void SetPpuMode(PpuMode mode);
-
   // VRAMがアクセス可能かどうか調べる
   bool IsVRamAccessible() const {
     return !lcdc_.IsPPUEnabled() || (ppu_mode_ != PpuMode::kDrawingPixels);
@@ -236,14 +230,8 @@ class Ppu {
            (ppu_mode_ == PpuMode::kVBlank);
   }
 
-  // LYレジスタをインクリメントする。
-  // 最後の行の場合は0に戻す。
-  // STATレジスタと割り込みフラグの更新も行う。
-  void IncrementLy();
-
-  // 現在のモードにおける経過サイクル数。
-  // VBlankでは1行ごとにリセットされる。
-  unsigned elapsed_cycles_in_current_mode_{};
+  // 現在のフレームにおける経過サイクル数。
+  unsigned elapsed_cycles_in_frame_{};
 
   Lcdc lcdc_{};
   Stat stat_{};
@@ -261,10 +249,15 @@ class Ppu {
   GbLcdPixelMatrix buffer_{};  // LCDに表示する画面
   // バッファへの描画が完了したかどうかを示すフラグ。
   // VBlankに入るとtrueになり、VBlankが終わるか、
-  // このフラグの値を外部から取得されるとfalseになる。
+  // このフラグの値を外部から取得するとfalseになる。
   bool is_buffer_ready_{false};
 
   Interrupt& interrupt_;
+
+  // STAT割り込みの信号線の状態を記憶する。
+  // STAT割り込みの要求フラグはこの信号線がlow(false)から
+  // high(true)になったときセットされる。
+  bool stat_interrupt_wire_{false};
 
   struct Object {
     std::uint8_t y_pos;
@@ -273,7 +266,7 @@ class Ppu {
     std::uint8_t attributes;
     bool operator>(const Object& rhs) const { return x_pos > rhs.x_pos; }
     // 指定のスキャンライン上で描画の対象となるか判定する
-    bool IsOnScanLine(std::uint8_t ly, ObjectSize size) const;
+    bool IsOnScanline(std::uint8_t ly, ObjectSize size) const;
 
     enum class Priority {
       kFront,  // Background/Windowより前面に出る
@@ -296,7 +289,7 @@ class Ppu {
   std::priority_queue<Object, std::vector<Object>, std::greater<Object>>
       objects_on_scan_line_{};
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
-  static constexpr auto kMaxNumOfObjectsOnScanLine = 10;
+  static constexpr auto kMaxNumOfObjectsOnScanline = 10;
 
   // OAM Scanでバッファに記録した全オブジェクトをスキャンライン上に描画する。
   void WriteObjectsOnCurrentLine();
