@@ -75,14 +75,10 @@ class Ppu {
   void WriteOam8(std::uint16_t address, std::uint8_t value);
   // 指定されたサイクル数だけPPUを進める。
   void Run(unsigned tcycle);
-  // バッファへの描画が完了した
-  bool IsBufferReady() {
-    if (is_buffer_ready_) {
-      is_buffer_ready_ = false;
-      return true;
-    }
-    return false;
-  }
+  // バッファへの描画が完了したかどうかを調べる
+  bool IsBufferReady() const { return is_buffer_ready_; }
+  // バッファへの描画完了フラグをリセットする
+  void ResetBufferReadyFlag() { is_buffer_ready_ = false; }
   // バッファを取得する
   const GbLcdPixelMatrix& GetBuffer() const { return buffer_; }
 
@@ -247,6 +243,7 @@ class Ppu {
   std::vector<std::uint8_t> vram_;
   std::vector<std::uint8_t> oam_;
   GbLcdPixelMatrix buffer_{};  // LCDに表示する画面
+
   // バッファへの描画が完了したかどうかを示すフラグ。
   // VBlankに入るとtrueになり、VBlankが終わるか、
   // このフラグの値を外部から取得するとfalseになる。
@@ -264,6 +261,8 @@ class Ppu {
     std::uint8_t x_pos;
     std::uint8_t tile_index;
     std::uint8_t attributes;
+
+    // 大小比較
     bool operator>(const Object& rhs) const { return x_pos > rhs.x_pos; }
     // 指定のスキャンライン上で描画の対象となるか判定する
     bool IsOnScanline(std::uint8_t ly, ObjectSize size) const;
@@ -283,11 +282,13 @@ class Ppu {
       return (attributes & (1 << 4)) ? GbPalette::kObp1 : GbPalette::kObp0;
     }
   };
+
   // OAM Scanで使用するバッファ。
   // 現在のスキャンライン上で描画の対象となるオブジェクトを
   // X座標の小さい順に格納する。
   std::priority_queue<Object, std::vector<Object>, std::greater<Object>>
       objects_on_scan_line_{};
+
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
   static constexpr auto kMaxNumOfObjectsOnScanline = 10;
 

@@ -10,6 +10,7 @@ void GameBoy::Step() {
     timer_.Run(tcycles);
     ppu_.Run(tcycles);
   }
+  ppu_.ResetBufferReadyFlag();
 }
 
 }  // namespace gbemu
