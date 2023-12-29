@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstdint>
-#include <queue>
 #include <vector>
 
 #include "interrupt.h"
@@ -212,7 +211,7 @@ class Ppu {
   };
 
   // OAMのオブジェクトを1つスキャンする。
-  void ScanSingleObject();
+  void ScanSingleOamEntry();
 
   // 現在の行をバッファに書き込む
   void WriteCurrentLineToBuffer();
@@ -282,14 +281,14 @@ class Ppu {
   // high(true)になったときセットされる。
   bool stat_interrupt_wire_{false};
 
-  struct Object {
+  struct OamEntry {
     std::uint8_t y_pos;
     std::uint8_t x_pos;
     std::uint8_t tile_index;
     std::uint8_t attributes;
 
     // 大小比較
-    bool operator>(const Object& rhs) const { return x_pos > rhs.x_pos; }
+    bool operator<(const OamEntry& rhs) const { return x_pos < rhs.x_pos; }
     // 指定のスキャンライン上で描画の対象となるか判定する
     bool IsOnScanline(std::uint8_t ly, ObjectSize size) const;
 
@@ -310,23 +309,36 @@ class Ppu {
   };
 
   // OAM Scanで使用するバッファ。
-  // 現在のスキャンライン上で描画の対象となるオブジェクトを
-  // X座標の小さい順に格納する。
-  std::priority_queue<Object, std::vector<Object>, std::greater<Object>>
-      objects_on_scan_line_{};
+  // 現在のスキャンライン上で描画の対象となるオブジェクトをX座標の小さい順に格納する。
+  std::vector<OamEntry> scanned_oam_entries_{};
 
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
   static constexpr auto kMaxNumOfObjectsOnScanline = 10;
 
-  // Backgroundをスキャンライン上に描画する。
-  void WriteBackgroundOnCurrentLine();
-  // Windowをスキャンライン上に描画する。
-  void WriteWindowOnCurrentLine();
-  // OAM Scanでバッファに記録した全オブジェクトをスキャンライン上に描画する。
-  void WriteObjectsOnCurrentLine();
-
-  // 指定のオブジェクトをスキャンライン上に描画する。
-  void WriteSingleObjectOnCurrentLine(const Object& object);
+  // スキャンラインに沿ってBackgroundレイヤの各ピクセルのカラーIDを配列に書き出す。
+  void WriteBackgroundOnCurrentLine(
+      std::array<unsigned, lcd::kWidth>& color_ids) const;
+  // スキャンラインに沿ってWindowレイヤの各ピクセルのカラーIDを配列に書き出す。
+  void WriteWindowOnCurrentLine(
+      std::array<unsigned, lcd::kWidth>& color_ids) const;
+  // スキャンラインに沿ってObjectレイヤの各ピクセルのカラーIDとそのピクセルが属する
+  // オブジェクトのOAMエントリを配列に書き出す。
+  // オブジェクトのない部分に対応する配列要素は変化させない。
+  void WriteObjectsOnCurrentLine(
+      std::array<unsigned, lcd::kWidth>& color_ids,
+      std::array<const OamEntry*, lcd::kWidth>& oam_entries);
+  // WriteObjectsOnCurrentLineのヘルパ。
+  // 1つのOAMエントリに対応するピクセルの情報を配列に書き出す。
+  void WriteSingleObjectOnCurrentLine(
+      const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
+      std::array<const OamEntry*, lcd::kWidth>& oam_entries) const;
+  // スキャンラインに沿って抽出した各レイヤをマージしてLCDの1行として書き出す
+  void MergeLinesOfEachLayer(
+      const std::array<unsigned, lcd::kWidth>& background_color_ids,
+      const std::array<unsigned, lcd::kWidth>& window_color_ids,
+      const std::array<unsigned, lcd::kWidth>& object_color_ids,
+      const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
+      GbLcdPixelRow& merged);
 };
 
 }  // namespace gbemu

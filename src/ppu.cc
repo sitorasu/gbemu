@@ -1,5 +1,6 @@
 #include "ppu.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -48,47 +49,49 @@ void Ppu::WriteOam8(std::uint16_t address, std::uint8_t value) {
   }
 }
 
-void Ppu::ScanSingleObject() {
-  // 描画可能なオブジェクトの最大数に達しているなら何もせずサイクルを消費
-  if (objects_on_scan_line_.size() == kMaxNumOfObjectsOnScanline) {
+void Ppu::ScanSingleOamEntry() {
+  // 描画可能なオブジェクトの最大数に達しているなら何もしない
+  if (scanned_oam_entries_.size() == kMaxNumOfObjectsOnScanline) {
     return;
   }
 
-  // OAMからオブジェクトを取得
+  // OAMからエントリを取得
   unsigned elapsed_cycles_in_oam_scan =
       elapsed_cycles_in_frame_ % kScanlineDuration;
   ASSERT(elapsed_cycles_in_oam_scan < kOamScanDuration,
          "This function must be called within OAM Scan.");
-  int object_index = elapsed_cycles_in_oam_scan / 2;
-  Object object;
-  object.y_pos = oam_.at(object_index * 4);
-  object.x_pos = oam_.at(object_index * 4 + 1);
-  object.tile_index = oam_.at(object_index * 4 + 2);
-  object.attributes = oam_.at(object_index * 4 + 3);
+  int entry_index = elapsed_cycles_in_oam_scan / 2;
+  OamEntry entry;
+  entry.y_pos = oam_.at(entry_index * 4);
+  entry.x_pos = oam_.at(entry_index * 4 + 1);
+  entry.tile_index = oam_.at(entry_index * 4 + 2);
+  entry.attributes = oam_.at(entry_index * 4 + 3);
 
-  // オブジェクトがスキャンライン上にあるならバッファに追加
-  if (object.IsOnScanline(ly_, lcdc_.GetCurrentObjectSize())) {
-    objects_on_scan_line_.push(object);
+  // エントリが表すオブジェクトがスキャンライン上にあるならバッファに追加
+  if (entry.IsOnScanline(ly_, lcdc_.GetCurrentObjectSize())) {
+    scanned_oam_entries_.push_back(entry);
   }
 }
 
 void Ppu::WriteCurrentLineToBuffer() {
+  std::array<unsigned, lcd::kWidth> background_color_ids{};
   if (lcdc_.IsBackgroundEnabled()) {
-    WriteBackgroundOnCurrentLine();
+    WriteBackgroundOnCurrentLine(background_color_ids);
   }
 
+  std::array<unsigned, lcd::kWidth> window_color_ids{};
   if (lcdc_.IsWindowEnabled()) {
-    WriteWindowOnCurrentLine();
+    // WriteWindowOnCurrentLine(window_color_ids);
   }
 
+  std::array<unsigned, lcd::kWidth> objects_color_ids{};
+  std::array<const OamEntry*, lcd::kWidth> oam_entries{};
   if (lcdc_.IsObjectEnabled()) {
-    WriteObjectsOnCurrentLine();
-  } else {
-    // スキャンしたオブジェクトをクリア
-    while (!objects_on_scan_line_.empty()) {
-      objects_on_scan_line_.pop();
-    }
+    WriteObjectsOnCurrentLine(objects_color_ids, oam_entries);
   }
+
+  MergeLinesOfEachLayer(background_color_ids, window_color_ids,
+                        objects_color_ids, oam_entries, buffer_.at(ly_));
 }
 
 // サイクル数はM-cycle単位（＝4の倍数のT-cycle）でしか渡されず、
@@ -114,7 +117,7 @@ unsigned Ppu::Step() {
   // モード固有の処理を行い、消費したサイクル数を求める
   switch (ppu_mode_) {
     case PpuMode::kOamScan:
-      ScanSingleObject();
+      ScanSingleOamEntry();
       elapsed = 2;
       break;
     case PpuMode::kDrawingPixels: {
@@ -122,6 +125,7 @@ unsigned Ppu::Step() {
           elapsed_cycles_in_frame_ % kScanlineDuration;
       if (elapsed_cycles_in_line == kOamScanDuration) {
         WriteCurrentLineToBuffer();
+        scanned_oam_entries_.clear();
       }
       elapsed = 1;
       break;
@@ -235,10 +239,41 @@ std::array<unsigned, Ppu::kTileSize> Ppu::DecodeTileRow(
   return result;
 }
 
-void Ppu::WriteBackgroundOnCurrentLine() {
-  // 書き込み先のバッファの行
-  GbLcdPixelRow& line = buffer_.at(ly_);
+void Ppu::MergeLinesOfEachLayer(
+    const std::array<unsigned, lcd::kWidth>& background_color_ids,
+    const std::array<unsigned, lcd::kWidth>& window_color_ids,
+    const std::array<unsigned, lcd::kWidth>& object_color_ids,
+    const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
+    GbLcdPixelRow& merged) {
+  for (int i = 0; i < lcd::kWidth; i++) {
+    lcd::GbLcdColor& dst = merged.at(i);
+    dst = lcd::GbLcdColor::kWhite;
 
+    // Backgroundの描画
+    if (lcdc_.IsBackgroundEnabled()) {
+      dst = GetGbLcdColor(background_color_ids[i], bgp_);
+    }
+
+    // Objectの描画
+    if (lcdc_.IsObjectEnabled() && oam_entries[i] != nullptr &&
+        object_color_ids[i] != 0) {
+      const OamEntry& entry = *oam_entries[i];
+      bool is_front = entry.GetPriority() == OamEntry::Priority::kFront;
+      bool background_overlay =
+          lcdc_.IsBackgroundEnabled() && background_color_ids[i] != 0;
+      bool window_overlay = lcdc_.IsWindowEnabled() && window_color_ids[i] != 0;
+      if (is_front || (!background_overlay && !window_overlay)) {
+        OamEntry::GbPalette palette = entry.GetGbPalette();
+        std::uint8_t obp =
+            palette == OamEntry::GbPalette::kObp0 ? obp0_ : obp1_;
+        dst = GetGbLcdColor(object_color_ids[i], obp);
+      }
+    }
+  }
+}
+
+void Ppu::WriteBackgroundOnCurrentLine(
+    std::array<unsigned, lcd::kWidth>& color_ids) const {
   // スキャンラインと交差するタイルのうち左端のものを取得する
   int tile_pos_y = (scy_ + ly_) / kTileSize;
   int tile_pos_x = scx_ / kTileSize;
@@ -249,8 +284,8 @@ void Ppu::WriteBackgroundOnCurrentLine() {
   const std::uint8_t* tile =
       GetTileFromTileMap(tile_pos_x, tile_pos_y, area, mode);
 
-  // 左から右にタイルマップを移動しながら、スキャンラインと交差するタイルの行を
-  // バッファに書き込む
+  // 左から右にタイルマップを移動しながら、
+  // スキャンラインと交差するタイルの行を配列に書き込む
   int pos_in_line = 0;
   for (int i = 0; i < 21; i++) {
     int col_start = i == 0 ? tile_col_offset : 0;
@@ -258,59 +293,56 @@ void Ppu::WriteBackgroundOnCurrentLine() {
     std::array<unsigned, kTileSize> tile_row =
         DecodeTileRow(tile, tile_row_offset);
     for (int j = col_start; j < col_end; j++) {
-      lcd::GbLcdColor color = GetGbLcdColor(tile_row[j], bgp_);
-      line.at(pos_in_line++) = color;
+      color_ids.at(pos_in_line++) = tile_row[j];
     }
     tile_pos_x = (tile_pos_x + 1) % 32;
     tile = GetTileFromTileMap(tile_pos_x, tile_pos_y, area, mode);
   }
 }
 
-void Ppu::WriteWindowOnCurrentLine() {
-  // do something
-}
-
-void Ppu::WriteObjectsOnCurrentLine() {
-  while (!objects_on_scan_line_.empty()) {
-    const Object& object = objects_on_scan_line_.top();
-    WriteSingleObjectOnCurrentLine(object);
-    objects_on_scan_line_.pop();
+void Ppu::WriteObjectsOnCurrentLine(
+    std::array<unsigned, lcd::kWidth>& color_ids,
+    std::array<const OamEntry*, lcd::kWidth>& oam_entries) {
+  // X座標の小さいものを前面に描画するために、X座標の大きいものを先に描画する
+  std::stable_sort(scanned_oam_entries_.begin(), scanned_oam_entries_.end());
+  for (auto i = scanned_oam_entries_.rbegin(), e = scanned_oam_entries_.rend();
+       i != e; i++) {
+    WriteSingleObjectOnCurrentLine(*i, color_ids, oam_entries);
   }
 }
 
-void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
-  GbLcdPixelRow& line = buffer_.at(ly_);
-  Object::GbPalette palette = object.GetGbPalette();
-  std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
+void Ppu::WriteSingleObjectOnCurrentLine(
+    const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
+    std::array<const OamEntry*, lcd::kWidth>& oam_entries) const {
   // TODO: Priorityの実装
 
   // 描画すべき行データを取得
-  int lcd_x = object.x_pos - 8;
-  int lcd_y = object.y_pos - 16;
+  int lcd_x = entry.x_pos - 8;
+  int lcd_y = entry.y_pos - 16;
   int lcd_y_offset = ly_ - lcd_y;
   int tile_row_offset =
-      object.IsYFlip() ? (lcdc_.GetCurrentObjectHeight() - 1 - lcd_y_offset)
-                       : lcd_y_offset;
+      entry.IsYFlip() ? (lcdc_.GetCurrentObjectHeight() - 1 - lcd_y_offset)
+                      : lcd_y_offset;
   int upper_tile_index = lcdc_.GetCurrentObjectSize() == ObjectSize::kDouble
-                             ? object.tile_index & 0xFE
-                             : object.tile_index;
+                             ? entry.tile_index & 0xFE
+                             : entry.tile_index;
   int tile_data_address = upper_tile_index * 16;
-  std::uint8_t* tile = &vram_.at(tile_data_address);
+  const std::uint8_t* tile = &vram_.at(tile_data_address);
   std::array<unsigned, kTileSize> tile_row =
       DecodeTileRow(tile, tile_row_offset);
   for (int i = 0; i < 8; i++) {
     // x-flipしているなら右端から、していないなら左端から描画する
-    unsigned color_id = object.IsXFlip() ? tile_row[7 - i] : tile_row[i];
+    unsigned color_id = entry.IsXFlip() ? tile_row[7 - i] : tile_row[i];
     if (color_id == 0) {
       continue;
     }
-    lcd::GbLcdColor color = GetGbLcdColor(color_id, obp);
+    color_ids.at(lcd_x + i) = color_id;
+    oam_entries.at(lcd_x + i) = &entry;
     // TODO: object.x_pos < 8 のケースの対処
-    line.at(lcd_x + i) = color;
   }
 }
 
-bool Ppu::Object::IsOnScanline(std::uint8_t ly, Ppu::ObjectSize size) const {
+bool Ppu::OamEntry::IsOnScanline(std::uint8_t ly, Ppu::ObjectSize size) const {
   unsigned height = size == ObjectSize::kSingle ? 8 : 16;
   return (x_pos > 0) && (ly + 16 >= y_pos) && (ly + 16 < y_pos + height);
 }
