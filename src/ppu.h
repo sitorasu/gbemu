@@ -94,7 +94,10 @@ class Ppu {
   static constexpr auto kDrawingPixelsDuration = 172;
   static constexpr auto kHBlankDuration = 204;
 
+  // Scanlineの数
   static constexpr auto kScanlineNum = 154;
+
+  // 1フレームの長さ（サイクル数）
   static constexpr auto kFrameDuration = kScanlineDuration * kScanlineNum;
 
   // タイルの1辺のピクセル数
@@ -238,10 +241,16 @@ class Ppu {
            (ppu_mode_ == PpuMode::kVBlank);
   }
 
-  // Background/Windowタイルマップの指定のインデックスのデータが参照する
-  // タイルのアドレスを計算する
-  std::uint16_t GetTileDataAddress(int tile_map_index, TileMapArea area,
-                                   TileDataAddressingMode mode) const;
+  // Background/Windowタイルマップの指定の位置のタイルへのポインタを返す
+  const std::uint8_t* GetTileFromTileMap(int tile_pos_x, int tile_pos_y,
+                                         TileMapArea area,
+                                         TileDataAddressingMode mode) const;
+
+  // タイルの任意の行をデコードしてカラーIDの配列にする。
+  // 行は0〜15で指定できる。8以上を指定できるのは高さ16のオブジェクトのタイルに対応するため。
+  // 戻り値の配列の0番目がタイルの左端のカラーIDに対応する。
+  std::array<unsigned, kTileSize> DecodeTileRow(const std::uint8_t* tile,
+                                                unsigned row) const;
 
   // 現在のフレームにおける経過サイクル数。
   unsigned elapsed_cycles_in_frame_{};

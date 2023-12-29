@@ -172,59 +172,84 @@ unsigned Ppu::Step() {
   return elapsed;
 }
 
-std::uint16_t Ppu::GetTileDataAddress(int tile_map_index, TileMapArea area,
-                                      TileDataAddressingMode mode) const {
+namespace {
+
+// カラーIDとパレットのレジスタの値から表示すべき色を得る（ゲームボーイ用）
+lcd::GbLcdColor GetGbLcdColor(unsigned color_id, std::uint8_t palette_reg) {
+  return static_cast<lcd::GbLcdColor>((palette_reg >> (color_id * 2)) & 0b11);
+}
+
+}  // namespace
+
+const std::uint8_t* Ppu::GetTileFromTileMap(int tile_pos_x, int tile_pos_y,
+                                            TileMapArea area,
+                                            TileDataAddressingMode mode) const {
+  // タイルマップからデータを取得する
+  int tile_map_index = 32 * tile_pos_y + tile_pos_x;
   std::uint16_t tile_map_base_address = area == TileMapArea::kLowerArea
                                             ? kLowerTileMapBaseAddress
                                             : kUpperTileMapBaseAddress;
   std::uint8_t tile_map_data =
       vram_.at(GetVRamAddressOffset(tile_map_base_address + tile_map_index));
+
+  // 指定したアドレッシングモードでタイルのアドレスを計算する
+  std::uint16_t tile_data_address;
   if (mode == TileDataAddressingMode::kLowerBlocksUnsigned) {
-    return kLowerTileBlocksBaseAddress + tile_map_data * 16;
+    tile_data_address = kLowerTileBlocksBaseAddress + tile_map_data * 16;
   } else {
     int offset = tile_map_data < 128 ? tile_map_data : tile_map_data - 256;
-    return kUpperTileBlocksBaseAddress + offset * 16;
+    tile_data_address = kUpperTileBlocksBaseAddress + offset * 16;
   }
+
+  // 計算したアドレスにあるタイルへのポインタを返す
+  return &vram_.at(GetVRamAddressOffset(tile_data_address));
 }
 
-namespace {
-lcd::GbLcdColor GetGbLcdColor(unsigned color_id, std::uint8_t palette_reg) {
-  return static_cast<lcd::GbLcdColor>((palette_reg >> (color_id * 2)) & 0b11);
+std::array<unsigned, Ppu::kTileSize> Ppu::DecodeTileRow(
+    const std::uint8_t* tile, unsigned row) const {
+  ASSERT(row < 16, "Unexpected argument.");
+  std::array<unsigned, kTileSize> result;
+  const std::uint8_t* tile_row = tile + 2 * row;
+  std::uint8_t lower_bits = *tile_row;
+  std::uint8_t upper_bits = *(tile_row + 1);
+  for (int i = 0; i < kTileSize; i++) {
+    unsigned shift_amount = 7 - i;
+    unsigned lower_bit = (lower_bits >> shift_amount) & 1;
+    unsigned upper_bit = (upper_bits >> shift_amount) & 1;
+    unsigned color_id = (upper_bit << 1) | lower_bit;
+    result[i] = color_id;
+  }
+  return result;
 }
-}  // namespace
 
 void Ppu::WriteBackgroundOnCurrentLine() {
+  // 書き込み先のバッファの行
   GbLcdPixelRow& line = buffer_.at(ly_);
+
+  // スキャンラインと交差するタイルのうち左端のものを取得する
   int tile_pos_y = (scy_ + ly_) / kTileSize;
   int tile_pos_x = scx_ / kTileSize;
   int tile_row_offset = (scy_ + ly_) % kTileSize;
   int tile_col_offset = scx_ % kTileSize;
-  int tile_map_index = 32 * tile_pos_y + tile_pos_x;
   TileMapArea area = lcdc_.GetCurrentBackgroundTileMapArea();
   TileDataAddressingMode mode = lcdc_.GetCurrentTileDataAddressingMode();
-  std::uint16_t tile_data_address =
-      GetTileDataAddress(tile_map_index, area, mode);
-  std::uint8_t* tile_row_data =
-      &vram_.at(GetVRamAddressOffset(tile_data_address + tile_row_offset * 2));
+  const std::uint8_t* tile =
+      GetTileFromTileMap(tile_pos_x, tile_pos_y, area, mode);
+
+  // 左から右にタイルマップを移動しながら、スキャンラインと交差するタイルの行を
+  // バッファに書き込む
   int pos_in_line = 0;
   for (int i = 0; i < 21; i++) {
-    std::uint8_t lower_bits = *tile_row_data;
-    std::uint8_t upper_bits = *(tile_row_data + 1);
     int col_start = i == 0 ? tile_col_offset : 0;
     int col_end = i == 20 ? tile_col_offset : kTileSize;
+    std::array<unsigned, kTileSize> tile_row =
+        DecodeTileRow(tile, tile_row_offset);
     for (int j = col_start; j < col_end; j++) {
-      unsigned shift_amount = 7 - j;
-      unsigned lower_bit = (lower_bits >> shift_amount) & 1;
-      unsigned upper_bit = (upper_bits >> shift_amount) & 1;
-      unsigned color_id = (upper_bit << 1) | lower_bit;
-      lcd::GbLcdColor color = GetGbLcdColor(color_id, bgp_);
+      lcd::GbLcdColor color = GetGbLcdColor(tile_row[j], bgp_);
       line.at(pos_in_line++) = color;
     }
     tile_pos_x = (tile_pos_x + 1) % 32;
-    tile_map_index = 32 * tile_pos_y + tile_pos_x;
-    tile_data_address = GetTileDataAddress(tile_map_index, area, mode);
-    tile_row_data = &vram_.at(
-        GetVRamAddressOffset(tile_data_address + tile_row_offset * 2));
+    tile = GetTileFromTileMap(tile_pos_x, tile_pos_y, area, mode);
   }
 }
 
@@ -260,16 +285,12 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
                              ? object.tile_index & 0xFE
                              : object.tile_index;
   int tile_data_address = upper_tile_index * 16;
-  std::uint8_t* tile_row_data =
-      &vram_.at(tile_data_address + tile_row_offset * 2);
-  std::uint8_t lower_bits = *tile_row_data;
-  std::uint8_t upper_bits = *(tile_row_data + 1);
+  std::uint8_t* tile = &vram_.at(tile_data_address);
+  std::array<unsigned, kTileSize> tile_row =
+      DecodeTileRow(tile, tile_row_offset);
   for (int i = 0; i < 8; i++) {
-    // x-flipしているなら最下位ビットから、していないなら最上位ビットから描画する
-    unsigned shift_amount = object.IsXFlip() ? i : (7 - i);
-    unsigned lower_bit = (lower_bits >> shift_amount) & 1;
-    unsigned upper_bit = (upper_bits >> shift_amount) & 1;
-    unsigned color_id = (upper_bit << 1) | lower_bit;
+    // x-flipしているなら右端から、していないなら左端から描画する
+    unsigned color_id = object.IsXFlip() ? tile_row[7 - i] : tile_row[i];
     if (color_id == 0) {
       continue;
     }
