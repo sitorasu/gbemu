@@ -73,9 +73,22 @@ void Ppu::ScanSingleObject() {
 }
 
 void Ppu::WriteCurrentLineToBuffer() {
-  WriteBackgroundOnCurrentLine();
-  WriteWindowOnCurrentLine();
-  WriteObjectsOnCurrentLine();
+  if (lcdc_.IsBackgroundEnabled()) {
+    WriteBackgroundOnCurrentLine();
+  }
+
+  if (lcdc_.IsWindowEnabled()) {
+    WriteWindowOnCurrentLine();
+  }
+
+  if (lcdc_.IsObjectEnabled()) {
+    WriteObjectsOnCurrentLine();
+  } else {
+    // スキャンしたオブジェクトをクリア
+    while (!objects_on_scan_line_.empty()) {
+      objects_on_scan_line_.pop();
+    }
+  }
 }
 
 // サイクル数はM-cycle単位（＝4の倍数のT-cycle）でしか渡されず、
@@ -259,11 +272,8 @@ void Ppu::WriteWindowOnCurrentLine() {
 
 void Ppu::WriteObjectsOnCurrentLine() {
   while (!objects_on_scan_line_.empty()) {
-    if (lcdc_.IsObjectEnabled()) {
-      const Object& object = objects_on_scan_line_.top();
-      WriteSingleObjectOnCurrentLine(object);
-    }
-    // オブジェクトの表示が有効でも無効でも捨てることに注意（バグを作り込んだ）
+    const Object& object = objects_on_scan_line_.top();
+    WriteSingleObjectOnCurrentLine(object);
     objects_on_scan_line_.pop();
   }
 }
