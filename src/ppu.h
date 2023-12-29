@@ -97,6 +97,17 @@ class Ppu {
   static constexpr auto kScanlineNum = 154;
   static constexpr auto kFrameDuration = kScanlineDuration * kScanlineNum;
 
+  // タイルの1辺のピクセル数
+  static constexpr auto kTileSize = 8;
+
+  // Background/Windowに使用するタイルマップのベースアドレス
+  static constexpr auto kLowerTileMapBaseAddress = 0x9800;
+  static constexpr auto kUpperTileMapBaseAddress = 0x9C00;
+
+  // タイルデータの区画のベースアドレス
+  static constexpr auto kLowerTileBlocksBaseAddress = 0x8000;
+  static constexpr auto kUpperTileBlocksBaseAddress = 0x9000;
+
   // Background/Windowに使用するタイルマップの区画
   enum class TileMapArea {
     kLowerArea,  // $9800-9BFF
@@ -159,7 +170,8 @@ class Ppu {
 
     // 現在のオブジェクトの高さを取得する
     unsigned GetCurrentObjectHeight() const {
-      return GetCurrentObjectSize() == ObjectSize::kDouble ? 16 : 8;
+      return GetCurrentObjectSize() == ObjectSize::kDouble ? 2 * kTileSize
+                                                           : kTileSize;
     }
 
     // Objectレイヤーが描画されるかどうか調べる
@@ -225,6 +237,11 @@ class Ppu {
     return !lcdc_.IsPPUEnabled() || (ppu_mode_ == PpuMode::kHBlank) ||
            (ppu_mode_ == PpuMode::kVBlank);
   }
+
+  // Background/Windowタイルマップの指定のインデックスのデータが参照する
+  // タイルのアドレスを計算する
+  std::uint16_t GetTileDataAddress(int tile_map_index, TileMapArea area,
+                                   TileDataAddressingMode mode) const;
 
   // 現在のフレームにおける経過サイクル数。
   unsigned elapsed_cycles_in_frame_{};
@@ -292,14 +309,15 @@ class Ppu {
   // スキャンライン上に同時に描画可能なオブジェクトの最大数
   static constexpr auto kMaxNumOfObjectsOnScanline = 10;
 
+  // Backgroundをスキャンライン上に描画する。
+  void WriteBackgroundOnCurrentLine();
+  // Windowをスキャンライン上に描画する。
+  void WriteWindowOnCurrentLine();
   // OAM Scanでバッファに記録した全オブジェクトをスキャンライン上に描画する。
   void WriteObjectsOnCurrentLine();
 
   // 指定のオブジェクトをスキャンライン上に描画する。
   void WriteSingleObjectOnCurrentLine(const Object& object);
-
-  lcd::GbLcdColor GetGbObjectColor(unsigned color_id,
-                                   Object::GbPalette palette) const;
 };
 
 }  // namespace gbemu

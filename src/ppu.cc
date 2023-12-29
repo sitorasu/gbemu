@@ -11,12 +11,12 @@ namespace {
 
 // VRAM領域の開始アドレス$8000をベースとするオフセットを得る。
 // $8000より小さいアドレスを引数に指定してはいけない。
-static std::uint16_t GetVRamAddressOffset(std::uint16_t address) {
+std::uint16_t GetVRamAddressOffset(std::uint16_t address) {
   return address - kVRamStartAddress;
 }
 // OAM領域の開始アドレス$FE00をベースとするオフセットを得る。
 // $FE00より小さいアドレスを引数に指定してはいけない。
-static std::uint16_t GetOamAddressOffset(std::uint16_t address) {
+std::uint16_t GetOamAddressOffset(std::uint16_t address) {
   return address - kOamStartAddress;
 }
 
@@ -73,7 +73,8 @@ void Ppu::ScanSingleObject() {
 }
 
 void Ppu::WriteCurrentLineToBuffer() {
-  // とりあえずオブジェクトだけ書いてみる
+  WriteBackgroundOnCurrentLine();
+  WriteWindowOnCurrentLine();
   WriteObjectsOnCurrentLine();
 }
 
@@ -171,6 +172,66 @@ unsigned Ppu::Step() {
   return elapsed;
 }
 
+std::uint16_t Ppu::GetTileDataAddress(int tile_map_index, TileMapArea area,
+                                      TileDataAddressingMode mode) const {
+  std::uint16_t tile_map_base_address = area == TileMapArea::kLowerArea
+                                            ? kLowerTileMapBaseAddress
+                                            : kUpperTileMapBaseAddress;
+  std::uint8_t tile_map_data =
+      vram_.at(GetVRamAddressOffset(tile_map_base_address + tile_map_index));
+  if (mode == TileDataAddressingMode::kLowerBlocksUnsigned) {
+    return kLowerTileBlocksBaseAddress + tile_map_data * 16;
+  } else {
+    int offset = tile_map_data < 128 ? tile_map_data : tile_map_data - 256;
+    return kUpperTileBlocksBaseAddress + offset * 16;
+  }
+}
+
+namespace {
+lcd::GbLcdColor GetGbLcdColor(unsigned color_id, std::uint8_t palette_reg) {
+  return static_cast<lcd::GbLcdColor>((palette_reg >> (color_id * 2)) & 0b11);
+}
+}  // namespace
+
+void Ppu::WriteBackgroundOnCurrentLine() {
+  GbLcdPixelRow& line = buffer_.at(ly_);
+  int tile_pos_y = (scy_ + ly_) / kTileSize;
+  int tile_pos_x = scx_ / kTileSize;
+  int tile_row_offset = (scy_ + ly_) % kTileSize;
+  int tile_col_offset = scx_ % kTileSize;
+  int tile_map_index = 32 * tile_pos_y + tile_pos_x;
+  TileMapArea area = lcdc_.GetCurrentBackgroundTileMapArea();
+  TileDataAddressingMode mode = lcdc_.GetCurrentTileDataAddressingMode();
+  std::uint16_t tile_data_address =
+      GetTileDataAddress(tile_map_index, area, mode);
+  std::uint8_t* tile_row_data =
+      &vram_.at(GetVRamAddressOffset(tile_data_address + tile_row_offset * 2));
+  int pos_in_line = 0;
+  for (int i = 0; i < 21; i++) {
+    std::uint8_t lower_bits = *tile_row_data;
+    std::uint8_t upper_bits = *(tile_row_data + 1);
+    int col_start = i == 0 ? tile_col_offset : 0;
+    int col_end = i == 20 ? tile_col_offset : kTileSize;
+    for (int j = col_start; j < col_end; j++) {
+      unsigned shift_amount = 7 - j;
+      unsigned lower_bit = (lower_bits >> shift_amount) & 1;
+      unsigned upper_bit = (upper_bits >> shift_amount) & 1;
+      unsigned color_id = (upper_bit << 1) | lower_bit;
+      lcd::GbLcdColor color = GetGbLcdColor(color_id, bgp_);
+      line.at(pos_in_line++) = color;
+    }
+    tile_pos_x = (tile_pos_x + 1) % 32;
+    tile_map_index = 32 * tile_pos_y + tile_pos_x;
+    tile_data_address = GetTileDataAddress(tile_map_index, area, mode);
+    tile_row_data = &vram_.at(
+        GetVRamAddressOffset(tile_data_address + tile_row_offset * 2));
+  }
+}
+
+void Ppu::WriteWindowOnCurrentLine() {
+  // do something
+}
+
 void Ppu::WriteObjectsOnCurrentLine() {
   while (!objects_on_scan_line_.empty()) {
     if (lcdc_.IsObjectEnabled()) {
@@ -185,6 +246,7 @@ void Ppu::WriteObjectsOnCurrentLine() {
 void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
   GbLcdPixelRow& line = buffer_.at(ly_);
   Object::GbPalette palette = object.GetGbPalette();
+  std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
   // TODO: Priorityの実装
 
   // 描画すべき行データを取得
@@ -208,15 +270,13 @@ void Ppu::WriteSingleObjectOnCurrentLine(const Object& object) {
     unsigned lower_bit = (lower_bits >> shift_amount) & 1;
     unsigned upper_bit = (upper_bits >> shift_amount) & 1;
     unsigned color_id = (upper_bit << 1) | lower_bit;
-    lcd::GbLcdColor color = GetGbObjectColor(color_id, palette);
+    if (color_id == 0) {
+      continue;
+    }
+    lcd::GbLcdColor color = GetGbLcdColor(color_id, obp);
+    // TODO: object.x_pos < 8 のケースの対処
     line.at(lcd_x + i) = color;
   }
-}
-
-lcd::GbLcdColor Ppu::GetGbObjectColor(unsigned color_id,
-                                      Object::GbPalette palette) const {
-  std::uint8_t obp = palette == Object::GbPalette::kObp0 ? obp0_ : obp1_;
-  return static_cast<lcd::GbLcdColor>((obp >> (color_id * 2)) & 0b11);
 }
 
 bool Ppu::Object::IsOnScanline(std::uint8_t ly, Ppu::ObjectSize size) const {
