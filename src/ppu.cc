@@ -74,17 +74,20 @@ void Ppu::ScanNextOamEntry() {
 }
 
 void Ppu::WriteCurrentLineToBuffer() {
-  std::array<unsigned, lcd::kWidth> background_color_ids{};
+  ColorIdArray<lcd::kWidth> background_color_ids;
+  background_color_ids.fill(-1);
   if (lcdc_.IsBackgroundEnabled()) {
     WriteBackgroundOnScanline(background_color_ids);
   }
 
-  std::array<unsigned, lcd::kWidth> window_color_ids{};
+  ColorIdArray<lcd::kWidth> window_color_ids;
+  window_color_ids.fill(-1);
   if (lcdc_.IsWindowEnabled()) {
-    // WriteWindowOnScanline(window_color_ids);
+    WriteWindowOnScanline(window_color_ids);
   }
 
-  std::array<unsigned, lcd::kWidth> objects_color_ids{};
+  ColorIdArray<lcd::kWidth> objects_color_ids;
+  objects_color_ids.fill(-1);
   std::array<const OamEntry*, lcd::kWidth> oam_entries{};
   if (lcdc_.IsObjectEnabled()) {
     WriteObjectsOnScanline(objects_color_ids, oam_entries);
@@ -222,10 +225,10 @@ const std::uint8_t* Ppu::GetTileFromTileMap(int tile_pos_x, int tile_pos_y,
   return &vram_.at(GetVRamAddressOffset(tile_data_address));
 }
 
-std::array<unsigned, Ppu::kTileSize> Ppu::DecodeTileRow(
-    const std::uint8_t* tile, unsigned row) const {
+Ppu::ColorIdArray<Ppu::kTileSize> Ppu::DecodeTileRow(const std::uint8_t* tile,
+                                                     unsigned row) const {
   ASSERT(row < 16, "Unexpected argument.");
-  std::array<unsigned, kTileSize> result;
+  ColorIdArray<kTileSize> result;
   const std::uint8_t* tile_row = tile + 2 * row;
   std::uint8_t lower_bits = *tile_row;
   std::uint8_t upper_bits = *(tile_row + 1);
@@ -240,9 +243,9 @@ std::array<unsigned, Ppu::kTileSize> Ppu::DecodeTileRow(
 }
 
 void Ppu::MergeLinesOfEachLayer(
-    const std::array<unsigned, lcd::kWidth>& background_color_ids,
-    const std::array<unsigned, lcd::kWidth>& window_color_ids,
-    const std::array<unsigned, lcd::kWidth>& object_color_ids,
+    const ColorIdArray<lcd::kWidth>& background_color_ids,
+    const ColorIdArray<lcd::kWidth>& window_color_ids,
+    const ColorIdArray<lcd::kWidth>& object_color_ids,
     const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
     GbLcdPixelRow& merged) {
   for (int i = 0; i < lcd::kWidth; i++) {
@@ -250,18 +253,24 @@ void Ppu::MergeLinesOfEachLayer(
     dst = lcd::GbLcdColor::kWhite;
 
     // Backgroundの描画
-    if (lcdc_.IsBackgroundEnabled()) {
+    if (background_color_ids[i] != -1) {
       dst = GetGbLcdColor(background_color_ids[i], bgp_);
     }
 
+    // Windowの描画
+    if (window_color_ids[i] != -1) {
+      dst = GetGbLcdColor(window_color_ids[i], bgp_);
+    }
+
     // Objectの描画
-    if (lcdc_.IsObjectEnabled() && oam_entries[i] != nullptr &&
+    if (object_color_ids[i] != -1 && oam_entries[i] != nullptr &&
         object_color_ids[i] != 0) {
       const OamEntry& entry = *oam_entries[i];
       bool is_front = entry.GetPriority() == OamEntry::Priority::kFront;
       bool background_overlay =
-          lcdc_.IsBackgroundEnabled() && background_color_ids[i] != 0;
-      bool window_overlay = lcdc_.IsWindowEnabled() && window_color_ids[i] != 0;
+          background_color_ids[i] != -1 && background_color_ids[i] != 0;
+      bool window_overlay =
+          window_color_ids[i] != -1 && window_color_ids[i] != 0;
       if (is_front || (!background_overlay && !window_overlay)) {
         OamEntry::GbPalette palette = entry.GetGbPalette();
         std::uint8_t obp =
@@ -272,8 +281,9 @@ void Ppu::MergeLinesOfEachLayer(
   }
 }
 
+// TODO: 縦のスクロールが未実装
 void Ppu::WriteBackgroundOnScanline(
-    std::array<unsigned, lcd::kWidth>& color_ids) const {
+    ColorIdArray<lcd::kWidth>& color_ids) const {
   // スキャンラインと交差するタイルのうち左端のものを取得する
   int tile_pos_y = (scy_ + ly_) / kTileSize;
   int tile_pos_x = scx_ / kTileSize;
@@ -290,8 +300,7 @@ void Ppu::WriteBackgroundOnScanline(
   for (int i = 0; i < 21; i++) {
     int col_start = i == 0 ? tile_col_offset : 0;
     int col_end = i == 20 ? tile_col_offset : kTileSize;
-    std::array<unsigned, kTileSize> tile_row =
-        DecodeTileRow(tile, tile_row_offset);
+    ColorIdArray<kTileSize> tile_row = DecodeTileRow(tile, tile_row_offset);
     for (int j = col_start; j < col_end; j++) {
       color_ids.at(pos_in_line++) = tile_row[j];
     }
@@ -300,8 +309,41 @@ void Ppu::WriteBackgroundOnScanline(
   }
 }
 
+void Ppu::WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const {
+  // Windowがスキャンラインと交わっていないなら何もしない
+  if (wy_ > ly_ || wx_ > 166) {
+    return;
+  }
+
+  // スキャンラインと交わる左端のタイルを取得する
+  int tile_map_pos_x = 0;
+  int tile_map_pos_y = (ly_ - wy_) / kTileSize;
+  TileMapArea area = lcdc_.GetWindowTileMapArea();
+  TileDataAddressingMode mode = lcdc_.GetTileDataAddressingMode();
+  const std::uint8_t* tile =
+      GetTileFromTileMap(tile_map_pos_x, tile_map_pos_y, area, mode);
+  int tile_row_offset = (ly_ - wy_) % kTileSize;
+
+  // 左から右にタイルマップを移動しながら、
+  // スキャンラインと交差するタイルの行を配列に書き込む
+  int pixel_pos_x = wx_ - 7;
+  bool reached_right_boarder = false;
+  while (!reached_right_boarder) {
+    ColorIdArray<kTileSize> tile_row = DecodeTileRow(tile, tile_row_offset);
+    for (int i = 0; i < kTileSize; i++) {
+      if (pixel_pos_x == lcd::kWidth) {
+        reached_right_boarder = true;
+        break;
+      }
+      color_ids.at(pixel_pos_x++) = tile_row[i];
+    }
+    tile_map_pos_x++;
+    tile = GetTileFromTileMap(tile_map_pos_x, tile_map_pos_y, area, mode);
+  }
+}
+
 void Ppu::WriteObjectsOnScanline(
-    std::array<unsigned, lcd::kWidth>& color_ids,
+    ColorIdArray<lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) {
   // X座標の小さいものを前面に描画するために、X座標の大きいものを先に描画する
   std::stable_sort(scanned_oam_entries_.begin(), scanned_oam_entries_.end());
@@ -312,7 +354,7 @@ void Ppu::WriteObjectsOnScanline(
 }
 
 void Ppu::WriteSingleObjectOnScanline(
-    const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
+    const OamEntry& entry, ColorIdArray<lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) const {
   // 描画すべきタイルの行データを取得
   int lcd_x = entry.x_pos - 8;
@@ -326,8 +368,7 @@ void Ppu::WriteSingleObjectOnScanline(
                              : entry.tile_index;
   int tile_data_address = upper_tile_index * 16;
   const std::uint8_t* tile = &vram_.at(tile_data_address);
-  std::array<unsigned, kTileSize> tile_row =
-      DecodeTileRow(tile, tile_row_offset);
+  ColorIdArray<kTileSize> tile_row = DecodeTileRow(tile, tile_row_offset);
 
   // 描画
   for (int i = 0; i < 8; i++) {

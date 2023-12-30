@@ -254,6 +254,12 @@ class Ppu {
     }
   };
 
+  // 要素数NのカラーIDの配列。
+  // 要素はカラーIDを表す整数。
+  // ただし-1は透過を表す。
+  template <int N>
+  using ColorIdArray = std::array<int, N>;
+
   // 次のOAMエントリをスキャンする。
   void ScanNextOamEntry();
 
@@ -290,35 +296,33 @@ class Ppu {
   // タイルの任意の行をデコードしてカラーIDの配列にする。
   // 行は0〜15で指定できる。8以上を指定できるのは高さ16のオブジェクトのタイルに対応するため。
   // 戻り値の配列の0番目がタイルの左端のカラーIDに対応する。
-  std::array<unsigned, kTileSize> DecodeTileRow(const std::uint8_t* tile,
-                                                unsigned row) const;
+  ColorIdArray<kTileSize> DecodeTileRow(const std::uint8_t* tile,
+                                        unsigned row) const;
 
   // スキャンラインに沿ってBackgroundレイヤの各ピクセルのカラーIDを配列に書き出す。
-  void WriteBackgroundOnScanline(
-      std::array<unsigned, lcd::kWidth>& color_ids) const;
+  void WriteBackgroundOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const;
 
   // スキャンラインに沿ってWindowレイヤの各ピクセルのカラーIDを配列に書き出す。
-  void WriteWindowOnScanline(
-      std::array<unsigned, lcd::kWidth>& color_ids) const;
+  void WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const;
 
   // スキャンラインに沿ってObjectレイヤの各ピクセルのカラーIDとそのピクセルが属する
   // オブジェクトのOAMエントリを配列に書き出す。
   // オブジェクトのない部分に対応する配列要素は変化させない。
   void WriteObjectsOnScanline(
-      std::array<unsigned, lcd::kWidth>& color_ids,
+      ColorIdArray<lcd::kWidth>& color_ids,
       std::array<const OamEntry*, lcd::kWidth>& oam_entries);
 
   // WriteObjectsOnCurrentLineのヘルパ。
   // 1つのOAMエントリに対応するピクセルの情報を配列に書き出す。
   void WriteSingleObjectOnScanline(
-      const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
+      const OamEntry& entry, ColorIdArray<lcd::kWidth>& color_ids,
       std::array<const OamEntry*, lcd::kWidth>& oam_entries) const;
 
   // スキャンラインに沿って抽出した各レイヤをマージしてLCDの1行として書き出す
   void MergeLinesOfEachLayer(
-      const std::array<unsigned, lcd::kWidth>& background_color_ids,
-      const std::array<unsigned, lcd::kWidth>& window_color_ids,
-      const std::array<unsigned, lcd::kWidth>& object_color_ids,
+      const ColorIdArray<lcd::kWidth>& background_color_ids,
+      const ColorIdArray<lcd::kWidth>& window_color_ids,
+      const ColorIdArray<lcd::kWidth>& object_color_ids,
       const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
       GbLcdPixelRow& merged);
 
