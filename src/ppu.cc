@@ -314,9 +314,7 @@ void Ppu::WriteObjectsOnScanline(
 void Ppu::WriteSingleObjectOnScanline(
     const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) const {
-  // TODO: Priorityの実装
-
-  // 描画すべき行データを取得
+  // 描画すべきタイルの行データを取得
   int lcd_x = entry.x_pos - 8;
   int lcd_y = entry.y_pos - 16;
   int lcd_y_offset = ly_ - lcd_y;
@@ -330,19 +328,27 @@ void Ppu::WriteSingleObjectOnScanline(
   const std::uint8_t* tile = &vram_.at(tile_data_address);
   std::array<unsigned, kTileSize> tile_row =
       DecodeTileRow(tile, tile_row_offset);
+
+  // 描画
   for (int i = 0; i < 8; i++) {
     // x-flipしているなら右端から、していないなら左端から描画する
     unsigned color_id = entry.IsXFlip() ? tile_row[7 - i] : tile_row[i];
+
+    // カラーID0は透過
     if (color_id == 0) {
       continue;
     }
-    color_ids.at(lcd_x + i) = color_id;
-    oam_entries.at(lcd_x + i) = &entry;
-    // TODO: object.x_pos < 8 のケースの対処
+
+    // 座標がLCDの画面内に収まるピクセルだけを描画する
+    int pixel_x = lcd_x + i;
+    if (0 <= pixel_x && pixel_x < lcd::kWidth) {
+      color_ids.at(lcd_x + i) = color_id;
+      oam_entries.at(lcd_x + i) = &entry;
+    }
   }
 }
 
 bool Ppu::OamEntry::IsOnScanline(std::uint8_t ly, Ppu::ObjectSize size) const {
   unsigned height = size == ObjectSize::kSingle ? 8 : 16;
-  return (x_pos > 0) && (ly + 16 >= y_pos) && (ly + 16 < y_pos + height);
+  return (ly + 16 >= y_pos) && (ly + 16 < y_pos + height);
 }
