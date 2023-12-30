@@ -49,7 +49,7 @@ void Ppu::WriteOam8(std::uint16_t address, std::uint8_t value) {
   }
 }
 
-void Ppu::ScanSingleOamEntry() {
+void Ppu::ScanNextOamEntry() {
   // 描画可能なオブジェクトの最大数に達しているなら何もしない
   if (scanned_oam_entries_.size() == kMaxNumOfObjectsOnScanline) {
     return;
@@ -68,7 +68,7 @@ void Ppu::ScanSingleOamEntry() {
   entry.attributes = oam_.at(entry_index * 4 + 3);
 
   // エントリが表すオブジェクトがスキャンライン上にあるならバッファに追加
-  if (entry.IsOnScanline(ly_, lcdc_.GetCurrentObjectSize())) {
+  if (entry.IsOnScanline(ly_, lcdc_.GetObjectSize())) {
     scanned_oam_entries_.push_back(entry);
   }
 }
@@ -76,18 +76,18 @@ void Ppu::ScanSingleOamEntry() {
 void Ppu::WriteCurrentLineToBuffer() {
   std::array<unsigned, lcd::kWidth> background_color_ids{};
   if (lcdc_.IsBackgroundEnabled()) {
-    WriteBackgroundOnCurrentLine(background_color_ids);
+    WriteBackgroundOnScanline(background_color_ids);
   }
 
   std::array<unsigned, lcd::kWidth> window_color_ids{};
   if (lcdc_.IsWindowEnabled()) {
-    // WriteWindowOnCurrentLine(window_color_ids);
+    // WriteWindowOnScanline(window_color_ids);
   }
 
   std::array<unsigned, lcd::kWidth> objects_color_ids{};
   std::array<const OamEntry*, lcd::kWidth> oam_entries{};
   if (lcdc_.IsObjectEnabled()) {
-    WriteObjectsOnCurrentLine(objects_color_ids, oam_entries);
+    WriteObjectsOnScanline(objects_color_ids, oam_entries);
   }
 
   MergeLinesOfEachLayer(background_color_ids, window_color_ids,
@@ -117,7 +117,7 @@ unsigned Ppu::Step() {
   // モード固有の処理を行い、消費したサイクル数を求める
   switch (ppu_mode_) {
     case PpuMode::kOamScan:
-      ScanSingleOamEntry();
+      ScanNextOamEntry();
       elapsed = 2;
       break;
     case PpuMode::kDrawingPixels: {
@@ -170,7 +170,7 @@ unsigned Ppu::Step() {
   } else {
     stat_.ResetLycEqualsLyBit();
   }
-  stat_.SetPpuMode(ppu_mode_);
+  stat_.SetPpuModeBits(ppu_mode_);
 
   // 割り込みフラグを立てる
   bool lyc_equals_ly_interrupt = (lyc_ == ly_) && stat_.IsLycInterruptEnabled();
@@ -272,15 +272,15 @@ void Ppu::MergeLinesOfEachLayer(
   }
 }
 
-void Ppu::WriteBackgroundOnCurrentLine(
+void Ppu::WriteBackgroundOnScanline(
     std::array<unsigned, lcd::kWidth>& color_ids) const {
   // スキャンラインと交差するタイルのうち左端のものを取得する
   int tile_pos_y = (scy_ + ly_) / kTileSize;
   int tile_pos_x = scx_ / kTileSize;
   int tile_row_offset = (scy_ + ly_) % kTileSize;
   int tile_col_offset = scx_ % kTileSize;
-  TileMapArea area = lcdc_.GetCurrentBackgroundTileMapArea();
-  TileDataAddressingMode mode = lcdc_.GetCurrentTileDataAddressingMode();
+  TileMapArea area = lcdc_.GetBackgroundTileMapArea();
+  TileDataAddressingMode mode = lcdc_.GetTileDataAddressingMode();
   const std::uint8_t* tile =
       GetTileFromTileMap(tile_pos_x, tile_pos_y, area, mode);
 
@@ -300,18 +300,18 @@ void Ppu::WriteBackgroundOnCurrentLine(
   }
 }
 
-void Ppu::WriteObjectsOnCurrentLine(
+void Ppu::WriteObjectsOnScanline(
     std::array<unsigned, lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) {
   // X座標の小さいものを前面に描画するために、X座標の大きいものを先に描画する
   std::stable_sort(scanned_oam_entries_.begin(), scanned_oam_entries_.end());
   for (auto i = scanned_oam_entries_.rbegin(), e = scanned_oam_entries_.rend();
        i != e; i++) {
-    WriteSingleObjectOnCurrentLine(*i, color_ids, oam_entries);
+    WriteSingleObjectOnScanline(*i, color_ids, oam_entries);
   }
 }
 
-void Ppu::WriteSingleObjectOnCurrentLine(
+void Ppu::WriteSingleObjectOnScanline(
     const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) const {
   // TODO: Priorityの実装
@@ -320,10 +320,10 @@ void Ppu::WriteSingleObjectOnCurrentLine(
   int lcd_x = entry.x_pos - 8;
   int lcd_y = entry.y_pos - 16;
   int lcd_y_offset = ly_ - lcd_y;
-  int tile_row_offset =
-      entry.IsYFlip() ? (lcdc_.GetCurrentObjectHeight() - 1 - lcd_y_offset)
-                      : lcd_y_offset;
-  int upper_tile_index = lcdc_.GetCurrentObjectSize() == ObjectSize::kDouble
+  int tile_row_offset = entry.IsYFlip()
+                            ? (lcdc_.GetObjectHeight() - 1 - lcd_y_offset)
+                            : lcd_y_offset;
+  int upper_tile_index = lcdc_.GetObjectSize() == ObjectSize::kDouble
                              ? entry.tile_index & 0xFE
                              : entry.tile_index;
   int tile_data_address = upper_tile_index * 16;

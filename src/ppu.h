@@ -74,11 +74,11 @@ class Ppu {
   void WriteOam8(std::uint16_t address, std::uint8_t value);
   // 指定されたサイクル数だけPPUを進める。
   void Run(unsigned tcycle);
-  // バッファへの描画が完了したかどうかを調べる
+  // バッファへの描画が完了したかどうかを調べる。
   bool IsBufferReady() const { return is_buffer_ready_; }
-  // バッファへの描画完了フラグをリセットする
+  // バッファへの描画完了フラグをリセットする。
   void ResetBufferReadyFlag() { is_buffer_ready_ = false; }
-  // バッファを取得する
+  // バッファを取得する。
   const GbLcdPixelMatrix& GetBuffer() const { return buffer_; }
 
  private:
@@ -93,40 +93,45 @@ class Ppu {
   static constexpr auto kDrawingPixelsDuration = 172;
   static constexpr auto kHBlankDuration = 204;
 
-  // Scanlineの数
+  // Scanlineの数。
   static constexpr auto kScanlineNum = 154;
 
-  // 1フレームの長さ（サイクル数）
+  // 1フレームの長さ（サイクル数）。
   static constexpr auto kFrameDuration = kScanlineDuration * kScanlineNum;
 
-  // タイルの1辺のピクセル数
+  // タイルの1辺のピクセル数。
   static constexpr auto kTileSize = 8;
 
-  // Background/Windowに使用するタイルマップのベースアドレス
+  // タイルマップのベースアドレス。
   static constexpr auto kLowerTileMapBaseAddress = 0x9800;
   static constexpr auto kUpperTileMapBaseAddress = 0x9C00;
 
-  // タイルデータの区画のベースアドレス
+  // タイルデータ格納領域のベースアドレス。
   static constexpr auto kLowerTileBlocksBaseAddress = 0x8000;
   static constexpr auto kUpperTileBlocksBaseAddress = 0x9000;
 
-  // Background/Windowに使用するタイルマップの区画
+  // スキャンライン上に同時に描画可能なオブジェクトの最大数
+  static constexpr auto kMaxNumOfObjectsOnScanline = 10;
+
+  // タイルマップの区画の種別。
   enum class TileMapArea {
     kLowerArea,  // $9800-9BFF
     kUpperArea   // $9C00-9FFF
   };
 
-  // Background/Windowに使用するタイルデータへのアドレッシングモード
+  // タイルデータ参照時のアドレッシングモードの種別。
   enum class TileDataAddressingMode {
     kUpperBlocksSigned,   // $9000 + signed 8-bit offset
     kLowerBlocksUnsigned  // $8000 + unsigned 8-bit offset
   };
 
+  // オブジェクトのサイズの種別。
   enum class ObjectSize {
     kSingle,  // 8x8
     kDouble   // 8x16
   };
 
+  // PPUモードの種別。
   enum class PpuMode {
     kHBlank = 0,
     kVBlank = 1,
@@ -141,56 +146,58 @@ class Ppu {
     // PPUが有効化されているか調べる。
     bool IsPPUEnabled() const { return data & (1 << 7); }
 
-    // 現在のWindowのタイルマップの区画を取得する
-    TileMapArea GetCurrentWindowTileMapArea() const {
+    // Windowに使用されるタイルマップの区画の種別を取得する。
+    TileMapArea GetWindowTileMapArea() const {
       return data & (1 << 6) ? TileMapArea::kUpperArea
                              : TileMapArea::kLowerArea;
     }
 
-    // 現在のBackgroundのタイルマップの区画を取得する
-    TileMapArea GetCurrentBackgroundTileMapArea() const {
+    // Backgroundに使用されるタイルマップの区画の種別を取得する。
+    TileMapArea GetBackgroundTileMapArea() const {
       return data & (1 << 3) ? TileMapArea::kUpperArea
                              : TileMapArea::kLowerArea;
     }
 
-    // Windowレイヤーが描画されるかどうか調べる
+    // Windowレイヤーが描画されるか調べる。
     bool IsWindowEnabled() const { return (data & 1) && (data & (1 << 5)); }
 
-    // Backgroundレイヤーが描画されるかどうか調べる
+    // Backgroundレイヤーが描画されるか調べる。
     bool IsBackgroundEnabled() const { return data & 1; }
 
-    // Background/Windowに使用するタイルデータへのアドレッシングモードを取得する
-    TileDataAddressingMode GetCurrentTileDataAddressingMode() const {
+    // タイルマップからタイルデータを参照する際のアドレッシングモードの種別を取得する。
+    TileDataAddressingMode GetTileDataAddressingMode() const {
       return (data & (1 << 4)) ? TileDataAddressingMode::kLowerBlocksUnsigned
                                : TileDataAddressingMode::kUpperBlocksSigned;
     }
 
-    // 現在のオブジェクトのサイズ種別を取得する
-    ObjectSize GetCurrentObjectSize() const {
+    // オブジェクトのサイズ種別を取得する。
+    ObjectSize GetObjectSize() const {
       return (data & (1 << 2)) ? ObjectSize::kDouble : ObjectSize::kSingle;
     }
 
-    // 現在のオブジェクトの高さを取得する
-    unsigned GetCurrentObjectHeight() const {
-      return GetCurrentObjectSize() == ObjectSize::kDouble ? 2 * kTileSize
-                                                           : kTileSize;
+    // オブジェクトの高さを取得する。
+    unsigned GetObjectHeight() const {
+      return GetObjectSize() == ObjectSize::kDouble ? 2 * kTileSize : kTileSize;
     }
 
-    // Objectレイヤーが描画されるかどうか調べる
+    // Objectレイヤーが描画されるかどうか調べる。
     bool IsObjectEnabled() const { return data & (1 << 1); }
   };
 
   // STATレジスタ
   struct Stat {
    public:
-    // レジスタに値をセットする
+    // レジスタに値をセットする。
+    // 書き込み可能なビットであるビット3~6だけをセットし、それ以外のビットは変化させない。
     void Set(std::uint8_t value) { data_ = (data_ & ~0x78) | (value & 0x78); }
 
-    // レジスタの値を取得する
+    // レジスタの値を取得する。
     std::uint8_t Get() const { return data_; }
 
+    // LYC=LYの割り込みが有効かどうか調べる。
     bool IsLycInterruptEnabled() const { return data_ & (1 << 6); }
 
+    // PPUモードの割り込みが有効かどうか調べる。
     bool IsPpuModeInterruptEnabled(PpuMode mode) const {
       ASSERT(mode != PpuMode::kDrawingPixels,
              "STAT does not have mode 3 interrupt selection");
@@ -198,10 +205,13 @@ class Ppu {
       return data_ & (1 << (mode_num + 3));
     }
 
+    // LYC=LYのビットを立てる。
     void SetLycEqualsLyBit() { data_ |= (1 << 2); }
+    // LYC=LYのビットを下ろす。
     void ResetLycEqualsLyBit() { data_ &= ~(1 << 2); }
 
-    void SetPpuMode(PpuMode mode) {
+    // PPUモードのビットを、与えられたPPUモードを表すパターンにセットする。
+    void SetPpuModeBits(PpuMode mode) {
       std::uint8_t mode_num = static_cast<std::uint8_t>(mode);
       data_ = (data_ & ~0b11) | mode_num;
     }
@@ -210,10 +220,44 @@ class Ppu {
     std::uint8_t data_;
   };
 
-  // OAMのオブジェクトを1つスキャンする。
-  void ScanSingleOamEntry();
+  // OAMのエントリ
+  struct OamEntry {
+    std::uint8_t y_pos;
+    std::uint8_t x_pos;
+    std::uint8_t tile_index;
+    std::uint8_t attributes;
 
-  // 現在の行をバッファに書き込む
+    // オブジェクト同士の大小比較。X座標の小さい方が小さいとする。
+    // オブジェクト同士の描画の優先順位を決定するために定義する。
+    bool operator<(const OamEntry& rhs) const { return x_pos < rhs.x_pos; }
+
+    // 指定のスキャンライン上で描画の対象となるか判定する。
+    bool IsOnScanline(std::uint8_t ly, ObjectSize size) const;
+
+    // Priorityの種別。
+    enum class Priority {
+      kFront,  // Background/Windowより前面に出る
+      kBack    // Background/WindowのColor ID1-3に隠れる
+    };
+
+    // オブジェクトに紐づくパレットの種別。
+    enum class GbPalette { kObp0, kObp1 };
+
+    // attributesの各種情報の取得。
+    Priority GetPriority() const {
+      return (attributes & (1 << 7)) ? Priority::kBack : Priority::kFront;
+    }
+    bool IsYFlip() const { return attributes & (1 << 6); }
+    bool IsXFlip() const { return attributes & (1 << 5); }
+    GbPalette GetGbPalette() const {
+      return (attributes & (1 << 4)) ? GbPalette::kObp1 : GbPalette::kObp0;
+    }
+  };
+
+  // 次のOAMエントリをスキャンする。
+  void ScanNextOamEntry();
+
+  // 現在の行をバッファに書き込む。
   void WriteCurrentLineToBuffer();
 
   // PPUを最小の処理単位で進め、消費したサイクル数を返す。
@@ -227,8 +271,6 @@ class Ppu {
   //     実装が大変なので単純化する。
   unsigned Step();
 
-  PpuMode ppu_mode_{PpuMode::kOamScan};
-
   // VRAMがアクセス可能かどうか調べる
   bool IsVRamAccessible() const {
     return !lcdc_.IsPPUEnabled() || (ppu_mode_ != PpuMode::kDrawingPixels);
@@ -240,7 +282,7 @@ class Ppu {
            (ppu_mode_ == PpuMode::kVBlank);
   }
 
-  // Background/Windowタイルマップの指定の位置のタイルへのポインタを返す
+  // タイルマップの指定の位置のタイルへのポインタを返す
   const std::uint8_t* GetTileFromTileMap(int tile_pos_x, int tile_pos_y,
                                          TileMapArea area,
                                          TileDataAddressingMode mode) const;
@@ -251,8 +293,34 @@ class Ppu {
   std::array<unsigned, kTileSize> DecodeTileRow(const std::uint8_t* tile,
                                                 unsigned row) const;
 
-  // 現在のフレームにおける経過サイクル数。
-  unsigned elapsed_cycles_in_frame_{};
+  // スキャンラインに沿ってBackgroundレイヤの各ピクセルのカラーIDを配列に書き出す。
+  void WriteBackgroundOnScanline(
+      std::array<unsigned, lcd::kWidth>& color_ids) const;
+
+  // スキャンラインに沿ってWindowレイヤの各ピクセルのカラーIDを配列に書き出す。
+  void WriteWindowOnScanline(
+      std::array<unsigned, lcd::kWidth>& color_ids) const;
+
+  // スキャンラインに沿ってObjectレイヤの各ピクセルのカラーIDとそのピクセルが属する
+  // オブジェクトのOAMエントリを配列に書き出す。
+  // オブジェクトのない部分に対応する配列要素は変化させない。
+  void WriteObjectsOnScanline(
+      std::array<unsigned, lcd::kWidth>& color_ids,
+      std::array<const OamEntry*, lcd::kWidth>& oam_entries);
+
+  // WriteObjectsOnCurrentLineのヘルパ。
+  // 1つのOAMエントリに対応するピクセルの情報を配列に書き出す。
+  void WriteSingleObjectOnScanline(
+      const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
+      std::array<const OamEntry*, lcd::kWidth>& oam_entries) const;
+
+  // スキャンラインに沿って抽出した各レイヤをマージしてLCDの1行として書き出す
+  void MergeLinesOfEachLayer(
+      const std::array<unsigned, lcd::kWidth>& background_color_ids,
+      const std::array<unsigned, lcd::kWidth>& window_color_ids,
+      const std::array<unsigned, lcd::kWidth>& object_color_ids,
+      const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
+      GbLcdPixelRow& merged);
 
   Lcdc lcdc_{};
   Stat stat_{};
@@ -269,6 +337,11 @@ class Ppu {
   std::vector<std::uint8_t> oam_;
   GbLcdPixelMatrix buffer_{};  // LCDに表示する画面
 
+  PpuMode ppu_mode_{PpuMode::kOamScan};
+
+  // 現在のフレームにおける経過サイクル数。
+  unsigned elapsed_cycles_in_frame_{};
+
   // バッファへの描画が完了したかどうかを示すフラグ。
   // VBlankに入るとtrueになり、VBlankが終わるか、
   // このフラグの値を外部から取得するとfalseになる。
@@ -281,64 +354,9 @@ class Ppu {
   // high(true)になったときセットされる。
   bool stat_interrupt_wire_{false};
 
-  struct OamEntry {
-    std::uint8_t y_pos;
-    std::uint8_t x_pos;
-    std::uint8_t tile_index;
-    std::uint8_t attributes;
-
-    // 大小比較
-    bool operator<(const OamEntry& rhs) const { return x_pos < rhs.x_pos; }
-    // 指定のスキャンライン上で描画の対象となるか判定する
-    bool IsOnScanline(std::uint8_t ly, ObjectSize size) const;
-
-    enum class Priority {
-      kFront,  // Background/Windowより前面に出る
-      kBack    // Background/WindowのColor ID1-3に隠れる
-    };
-    enum class GbPalette { kObp0, kObp1 };
-    // attributesの各種情報の取得
-    Priority GetPriority() const {
-      return (attributes & (1 << 7)) ? Priority::kBack : Priority::kFront;
-    }
-    bool IsYFlip() const { return attributes & (1 << 6); }
-    bool IsXFlip() const { return attributes & (1 << 5); }
-    GbPalette GetGbPalette() const {
-      return (attributes & (1 << 4)) ? GbPalette::kObp1 : GbPalette::kObp0;
-    }
-  };
-
   // OAM Scanで使用するバッファ。
   // 現在のスキャンライン上で描画の対象となるオブジェクトをX座標の小さい順に格納する。
   std::vector<OamEntry> scanned_oam_entries_{};
-
-  // スキャンライン上に同時に描画可能なオブジェクトの最大数
-  static constexpr auto kMaxNumOfObjectsOnScanline = 10;
-
-  // スキャンラインに沿ってBackgroundレイヤの各ピクセルのカラーIDを配列に書き出す。
-  void WriteBackgroundOnCurrentLine(
-      std::array<unsigned, lcd::kWidth>& color_ids) const;
-  // スキャンラインに沿ってWindowレイヤの各ピクセルのカラーIDを配列に書き出す。
-  void WriteWindowOnCurrentLine(
-      std::array<unsigned, lcd::kWidth>& color_ids) const;
-  // スキャンラインに沿ってObjectレイヤの各ピクセルのカラーIDとそのピクセルが属する
-  // オブジェクトのOAMエントリを配列に書き出す。
-  // オブジェクトのない部分に対応する配列要素は変化させない。
-  void WriteObjectsOnCurrentLine(
-      std::array<unsigned, lcd::kWidth>& color_ids,
-      std::array<const OamEntry*, lcd::kWidth>& oam_entries);
-  // WriteObjectsOnCurrentLineのヘルパ。
-  // 1つのOAMエントリに対応するピクセルの情報を配列に書き出す。
-  void WriteSingleObjectOnCurrentLine(
-      const OamEntry& entry, std::array<unsigned, lcd::kWidth>& color_ids,
-      std::array<const OamEntry*, lcd::kWidth>& oam_entries) const;
-  // スキャンラインに沿って抽出した各レイヤをマージしてLCDの1行として書き出す
-  void MergeLinesOfEachLayer(
-      const std::array<unsigned, lcd::kWidth>& background_color_ids,
-      const std::array<unsigned, lcd::kWidth>& window_color_ids,
-      const std::array<unsigned, lcd::kWidth>& object_color_ids,
-      const std::array<const OamEntry*, lcd::kWidth>& oam_entries,
-      GbLcdPixelRow& merged);
 };
 
 }  // namespace gbemu
