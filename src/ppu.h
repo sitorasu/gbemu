@@ -303,7 +303,7 @@ class Ppu {
   void WriteBackgroundOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const;
 
   // スキャンラインに沿ってWindowレイヤの各ピクセルのカラーIDを配列に書き出す。
-  void WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const;
+  void WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids);
 
   // スキャンラインに沿ってObjectレイヤの各ピクセルのカラーIDとそのピクセルが属する
   // オブジェクトのOAMエントリを配列に書き出す。
@@ -361,6 +361,12 @@ class Ppu {
   // OAM Scanで使用するバッファ。
   // 現在のスキャンライン上で描画の対象となるオブジェクトをX座標の小さい順に格納する。
   std::vector<OamEntry> scanned_oam_entries_{};
+
+  // Windowの描画開始フラグ。
+  bool window_rendering_started_{false};
+  // Windowの行カウンタ。
+  // Windowの描画開始後、1行描画するごとにインクリメントする。
+  unsigned window_internal_line_counter_{};
 };
 
 }  // namespace gbemu

@@ -127,6 +127,9 @@ unsigned Ppu::Step() {
       unsigned elapsed_cycles_in_line =
           elapsed_cycles_in_frame_ % kScanlineDuration;
       if (elapsed_cycles_in_line == kOamScanDuration) {
+        if (wy_ == ly_ && wx_ <= 166) {
+          window_rendering_started_ = true;
+        }
         WriteCurrentLineToBuffer();
         scanned_oam_entries_.clear();
       }
@@ -162,9 +165,8 @@ unsigned Ppu::Step() {
     }
   } else if (ly_ == lcd::kHeight) {
     ppu_mode_ = PpuMode::kVBlank;
-
-    // VBlankに入ったらバッファの準備完了フラグを立てる
     is_buffer_ready_ = true;
+    window_internal_line_counter_ = 0;
   }
 
   // STATを更新する
@@ -309,20 +311,23 @@ void Ppu::WriteBackgroundOnScanline(
   }
 }
 
-void Ppu::WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const {
-  // Windowがスキャンラインと交わっていないなら何もしない
+void Ppu::WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) {
+  if (!window_rendering_started_) {
+    return;
+  }
+
   if (wy_ > ly_ || wx_ > 166) {
     return;
   }
 
   // スキャンラインと交わる左端のタイルを取得する
   int tile_map_pos_x = 0;
-  int tile_map_pos_y = (ly_ - wy_) / kTileSize;
+  int tile_map_pos_y = window_internal_line_counter_ / kTileSize;
   TileMapArea area = lcdc_.GetWindowTileMapArea();
   TileDataAddressingMode mode = lcdc_.GetTileDataAddressingMode();
   const std::uint8_t* tile =
       GetTileFromTileMap(tile_map_pos_x, tile_map_pos_y, area, mode);
-  int tile_row_offset = (ly_ - wy_) % kTileSize;
+  int tile_row_offset = window_internal_line_counter_ % kTileSize;
 
   // 左から右にタイルマップを移動しながら、
   // スキャンラインと交差するタイルの行を配列に書き込む
@@ -340,6 +345,8 @@ void Ppu::WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) const {
     tile_map_pos_x++;
     tile = GetTileFromTileMap(tile_map_pos_x, tile_map_pos_y, area, mode);
   }
+
+  window_internal_line_counter_++;
 }
 
 void Ppu::WriteObjectsOnScanline(
