@@ -11,7 +11,8 @@
       "program": "${workspaceFolder}/build/gbemu",
       "args": [
         //"--debug",
-        "${workspaceFolder}/test_rom/dmg-acid2.gb"
+        //"${workspaceFolder}/test_rom/dmg-acid2.gb"
+        "${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
       ],
       "cwd": "${workspaceFolder}",
     }

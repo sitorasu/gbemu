@@ -347,8 +347,6 @@ class Ppu {
   unsigned elapsed_cycles_in_frame_{};
 
   // バッファへの描画が完了したかどうかを示すフラグ。
-  // VBlankに入るとtrueになり、VBlankが終わるか、
-  // このフラグの値を外部から取得するとfalseになる。
   bool is_buffer_ready_{false};
 
   Interrupt& interrupt_;

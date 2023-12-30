@@ -163,7 +163,7 @@ unsigned Ppu::Step() {
                (kOamScanDuration + kDrawingPixelsDuration)) {
       ppu_mode_ = PpuMode::kHBlank;
     }
-  } else if (ly_ == lcd::kHeight) {
+  } else if (ly_ == lcd::kHeight && elapsed_cycles_in_line == 0) {
     ppu_mode_ = PpuMode::kVBlank;
     is_buffer_ready_ = true;
     window_internal_line_counter_ = 0;
@@ -283,11 +283,10 @@ void Ppu::MergeLinesOfEachLayer(
   }
 }
 
-// TODO: 縦のスクロールが未実装
 void Ppu::WriteBackgroundOnScanline(
     ColorIdArray<lcd::kWidth>& color_ids) const {
   // スキャンラインと交差するタイルのうち左端のものを取得する
-  int tile_pos_y = (scy_ + ly_) / kTileSize;
+  int tile_pos_y = ((scy_ + ly_) / kTileSize) % 32;
   int tile_pos_x = scx_ / kTileSize;
   int tile_row_offset = (scy_ + ly_) % kTileSize;
   int tile_col_offset = scx_ % kTileSize;
