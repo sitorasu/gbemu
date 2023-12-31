@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "apu.h"
 #include "cartridge.h"
 #include "interrupt.h"
 #include "ppu.h"
@@ -45,11 +46,12 @@ class Memory {
  public:
   // コンストラクタ。ブートROMを与えるとメモリにマップした状態で初期化する。
   Memory(Cartridge* cartridge, Interrupt& interrupt, Timer& timer, Ppu& ppu,
-         std::vector<std::uint8_t>* boot_rom = nullptr)
+         Apu& apu, std::vector<std::uint8_t>* boot_rom = nullptr)
       : cartridge_(cartridge),
         interrupt_(interrupt),
         timer_(timer),
         ppu_(ppu),
+        apu_(apu),
         dma_(*this),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize),
@@ -78,6 +80,7 @@ class Memory {
   Interrupt& interrupt_;
   Timer& timer_;
   Ppu& ppu_;
+  Apu& apu_;
   Dma dma_;
 
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく

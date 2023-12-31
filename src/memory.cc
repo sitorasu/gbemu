@@ -4,8 +4,11 @@
 #include <iostream>
 #include <vector>
 
+#include "apu.h"
 #include "command_line.h"
 #include "interrupt.h"
+#include "ppu.h"
+#include "timer.h"
 #include "utils.h"
 
 namespace gbemu {
@@ -34,20 +37,6 @@ class IORegisters {
         return sb_;
       case 0xFF02:
         return sc_;
-      case 0xFF11:
-        return nr11_;
-      case 0xFF12:
-        return nr12_;
-      case 0xFF13:
-        return nr13_;
-      case 0xFF14:
-        return nr14_;
-      case 0xFF24:
-        return nr50_;
-      case 0xFF25:
-        return nr51_;
-      case 0xFF26:
-        return nr52_;
       default:
         UNREACHABLE("Unknown I/O register: $%04X", address);
     }
@@ -56,13 +45,6 @@ class IORegisters {
   std::uint8_t joyp_{};  // $FF00
   std::uint8_t sb_{};    // $FF01
   std::uint8_t sc_{};    // $FF02
-  std::uint8_t nr11_{};  // $FF11
-  std::uint8_t nr12_{};  // $FF12
-  std::uint8_t nr13_{};  // $FF13
-  std::uint8_t nr14_{};  // $FF14
-  std::uint8_t nr50_{};  // $FF24
-  std::uint8_t nr51_{};  // $FF25
-  std::uint8_t nr52_{};  // $FF26
 };
 
 IORegisters io_regs;
@@ -92,6 +74,87 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
       break;
     case 0xFF0F:
       interrupt_.SetIf(value);
+      break;
+    case 0xFF10:
+      apu_.set_nr10(value);
+      break;
+    case 0xFF11:
+      apu_.set_nr11(value);
+      break;
+    case 0xFF12:
+      apu_.set_nr12(value);
+      break;
+    case 0xFF13:
+      apu_.set_nr13(value);
+      break;
+    case 0xFF14:
+      apu_.set_nr14(value);
+      break;
+    case 0xFF16:
+      apu_.set_nr21(value);
+      break;
+    case 0xFF17:
+      apu_.set_nr22(value);
+      break;
+    case 0xFF18:
+      apu_.set_nr23(value);
+      break;
+    case 0xFF19:
+      apu_.set_nr24(value);
+      break;
+    case 0xFF1A:
+      apu_.set_nr30(value);
+      break;
+    case 0xFF1B:
+      apu_.set_nr31(value);
+      break;
+    case 0xFF1C:
+      apu_.set_nr32(value);
+      break;
+    case 0xFF1D:
+      apu_.set_nr33(value);
+      break;
+    case 0xFF1E:
+      apu_.set_nr34(value);
+      break;
+    case 0xFF20:
+      apu_.set_nr41(value);
+      break;
+    case 0xFF21:
+      apu_.set_nr42(value);
+      break;
+    case 0xFF22:
+      apu_.set_nr43(value);
+      break;
+    case 0xFF23:
+      apu_.set_nr44(value);
+      break;
+    case 0xFF24:
+      apu_.set_nr50(value);
+      break;
+    case 0xFF25:
+      apu_.set_nr51(value);
+      break;
+    case 0xFF26:
+      apu_.set_nr52(value);
+      break;
+    case 0xFF30:
+    case 0xFF31:
+    case 0xFF32:
+    case 0xFF33:
+    case 0xFF34:
+    case 0xFF35:
+    case 0xFF36:
+    case 0xFF37:
+    case 0xFF38:
+    case 0xFF39:
+    case 0xFF3A:
+    case 0xFF3B:
+    case 0xFF3C:
+    case 0xFF3D:
+    case 0xFF3E:
+    case 0xFF3F:
+      apu_.set_wave_ram(address - 0xFF30, value);
       break;
     case 0xFF40:
       ppu_.set_lcdc(value);
@@ -152,6 +215,40 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
       return timer_.tac();
     case 0xFF0F:
       return interrupt_.GetIf();
+    case 0xFF10:
+      return apu_.get_nr10();
+    case 0xFF11:
+      return apu_.get_nr11();
+    case 0xFF12:
+      return apu_.get_nr12();
+    case 0xFF13:
+      return apu_.get_nr13();
+    case 0xFF14:
+      return apu_.get_nr14();
+    case 0xFF16:
+      return apu_.get_nr21();
+    case 0xFF17:
+      return apu_.get_nr22();
+    case 0xFF18:
+      return apu_.get_nr23();
+    case 0xFF19:
+      return apu_.get_nr24();
+    case 0xFF1A:
+      return apu_.get_nr30();
+    case 0xFF1B:
+      return apu_.get_nr31();
+    case 0xFF1C:
+      return apu_.get_nr32();
+    case 0xFF1D:
+      return apu_.get_nr33();
+    case 0xFF1E:
+      return apu_.get_nr34();
+    case 0xFF24:
+      return apu_.get_nr50();
+    case 0xFF25:
+      return apu_.get_nr51();
+    case 0xFF26:
+      return apu_.get_nr52();
     case 0xFF40:
       return ppu_.lcdc();
     case 0xFF41:
@@ -162,7 +259,6 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
       return ppu_.scx();
     case 0xFF44:
       return ppu_.ly();
-      // return 0x90;  // VBlankの先頭で固定
     case 0xFF45:
       return ppu_.lyc();
     case 0xFF46:
@@ -258,7 +354,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     ppu_.WriteOam8(address, value);
   } else if (InNotUsableAreaRange(address)) {
     // アクセス禁止区間
-    Error("Write to $FEA0-FEFF is prohibited.");
+    WARN("Write to $FEA0-FEFF is prohibited.");
   } else if (InIORegistersRange(address)) {
     // I/Oレジスタへの書き込み
     WriteIORegister(address, value);

@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "apu.h"
 #include "cartridge.h"
 #include "cpu.h"
 #include "interrupt.h"
@@ -20,8 +21,9 @@ class GameBoy {
       : cartridge_(cartridge),
         interrupt_(),
         ppu_(interrupt_),
+        apu_(),
         timer_(interrupt_),
-        memory_(cartridge_, interrupt_, timer_, ppu_, boot_rom),
+        memory_(cartridge_, interrupt_, timer_, ppu_, apu_, boot_rom),
         cpu_(memory_, interrupt_) {}
 
   // 1フレーム進める
@@ -32,6 +34,7 @@ class GameBoy {
   Cartridge* cartridge_;
   Interrupt interrupt_;
   Ppu ppu_;
+  Apu apu_;
   Timer timer_;
   Memory memory_;
   Cpu cpu_;
