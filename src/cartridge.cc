@@ -9,8 +9,8 @@
 
 namespace gbemu {
 
-Cartridge::Cartridge(std::vector<std::uint8_t>&& rom)
-    : header_(), rom_(std::move(rom)), ram_(), mbc_() {
+Cartridge::Cartridge(std::vector<std::uint8_t>& rom)
+    : header_(), rom_(rom), ram_(), mbc_() {
   header_.Parse(rom_);
   if (header_.rom_size() * 1024 != rom_.size()) {
     Error("Actual ROM size is not consistent with the header.");

@@ -187,8 +187,8 @@ unsigned Ppu::Step() {
     interrupt_.SetIfBit(InterruptSource::kStat);
   }
   stat_interrupt_wire_ = stat_interrupt;
-  if (ppu_mode_ == PpuMode::kVBlank) {
-    interrupt_.SetIfBit(InterruptSource::kVblank);
+  if (ly_ == lcd::kHeight && elapsed_cycles_in_line == 0) {
+    interrupt_.SetIfBit(InterruptSource::kVBlank);
   }
 
   return elapsed;

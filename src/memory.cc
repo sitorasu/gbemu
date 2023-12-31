@@ -74,7 +74,7 @@ std::vector<std::uint8_t> vram(1024 * 8);
 
 void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
   // CGB固有のレジスタへのアクセスはとりあえず無効とする
-  if (address >= 0xFF4D) {
+  if (address >= 0xFF4D && address != 0xFF50) {
     return;
   }
   switch (address) {
@@ -119,6 +119,9 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
       break;
     case 0xFF49:
       ppu_.set_obp1(value);
+      break;
+    case 0xFF50:
+      is_boot_rom_mapped_ = false;
       break;
     case 0xFF4A:
       ppu_.set_wy(value);
@@ -181,8 +184,11 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
 
 uint8_t Memory::Read8(std::uint16_t address) const {
   if (InRomRange(address)) {
-    // カートリッジからの読み出し
-    return cartridge_->Read8(address);
+    if (is_boot_rom_mapped_ && address < 0x100) {
+      return boot_rom_->at(address);
+    } else {
+      return cartridge_->Read8(address);
+    }
   } else if (InVRamRange(address)) {
     // VRAMからの読み出し
     return ppu_.ReadVRam8(address);

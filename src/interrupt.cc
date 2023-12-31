@@ -8,7 +8,7 @@ namespace gbemu {
 
 std::uint16_t Interrupt::GetInterruptHandlerAddress(InterruptSource source) {
   switch (source) {
-    case InterruptSource::kVblank:
+    case InterruptSource::kVBlank:
       return 0x40;
     case InterruptSource::kStat:
       return 0x48;

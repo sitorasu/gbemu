@@ -9,7 +9,7 @@ namespace gbemu {
 // 列挙子の値はIEおよびIFのビット位置に対応する。
 enum class InterruptSource {
   kNone = -1,
-  kVblank,
+  kVBlank,
   kStat,
   kTimer,
   kSerial,

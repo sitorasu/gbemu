@@ -77,7 +77,9 @@ void WaitForNextFrame() {
 #define ENABLE_LCD
 
 int main(int argc, char* argv[]) {
-  options.Parse(argc, argv);
+  if (!options.Parse(argc, argv)) {
+    Error("Usage: gbemu [--debug] [--bootrom <bootrom_file>] --rom <rom_file>");
+  }
 
 #ifdef ENABLE_LCD
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -88,11 +90,17 @@ int main(int argc, char* argv[]) {
 #endif
 
   // ROMファイルをロード
-  std::vector<std::uint8_t> rom(LoadRom(options.filename()));
+  std::vector<std::uint8_t> rom(LoadRom(options.rom_file_name()));
 
-  std::shared_ptr<Cartridge> cartridge =
-      std::make_shared<Cartridge>(std::move(rom));
-  GameBoy gb(cartridge);
+  // ブートROMがあるならロード
+  std::vector<std::uint8_t>* boot_rom = nullptr;
+  if (options.has_boot_rom()) {
+    boot_rom =
+        new std::vector<std::uint8_t>(LoadRom(options.boot_rom_file_name()));
+  }
+
+  Cartridge cartridge(rom);
+  GameBoy gb(&cartridge, boot_rom);
 #ifndef ENABLE_LCD
   for (;;) {
     gb.Step();

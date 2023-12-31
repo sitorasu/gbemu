@@ -15,14 +15,6 @@ namespace gbemu {
 
 // CPUから見たメモリを表すクラス。
 // メモリアクセスを各コンポーネントに振り分ける。
-// CPUから見える通りに扱えるというだけで、エミュレータの実装としてはCPU以外が使ってもいい。
-// Example:
-//   std::vector<std::uint8_t> rom = LoadRom();
-//   Cartridge cartridge(std::move(rom));
-//   Memory memory(cartridge);
-//
-//   std::uint16_t address = 0x3000;
-//   std::uint8_t result = memory.Read8(address);
 class Memory {
  private:
   class Dma {
@@ -51,16 +43,21 @@ class Memory {
   };
 
  public:
-  Memory(std::shared_ptr<Cartridge> cartridge, Interrupt& interrupt,
-         Timer& timer, Ppu& ppu)
+  // コンストラクタ。ブートROMを与えるとメモリにマップした状態で初期化する。
+  Memory(Cartridge* cartridge, Interrupt& interrupt, Timer& timer, Ppu& ppu,
+         std::vector<std::uint8_t>* boot_rom = nullptr)
       : cartridge_(cartridge),
         interrupt_(interrupt),
         timer_(timer),
         ppu_(ppu),
         dma_(*this),
         internal_ram_(kInternalRamSize),
-        h_ram_(kHRamSize) {}
-  // 各コンポーネントへの参照を渡すコンストラクタがあると良さそう
+        h_ram_(kHRamSize),
+        boot_rom_(boot_rom),
+        is_boot_rom_mapped_(boot_rom_ != nullptr) {}
+
+  bool IsBootRomMapped() const { return is_boot_rom_mapped_; }
+
   std::uint8_t Read8(std::uint16_t address) const;
   std::uint16_t Read16(std::uint16_t address) const;
   std::vector<std::uint8_t> ReadBytes(std::uint16_t address,
@@ -77,7 +74,7 @@ class Memory {
 
   constexpr static auto kInternalRamSize = 8 * 1024;
   constexpr static auto kHRamSize = 127;
-  std::shared_ptr<Cartridge> cartridge_;
+  Cartridge* cartridge_;
   Interrupt& interrupt_;
   Timer& timer_;
   Ppu& ppu_;
@@ -86,6 +83,9 @@ class Memory {
   // ゲームボーイカラーだとRAMのサイズが違うのでarrayにはしないでおく
   std::vector<std::uint8_t> internal_ram_;
   std::vector<std::uint8_t> h_ram_;
+  std::vector<std::uint8_t>* boot_rom_;
+
+  bool is_boot_rom_mapped_;
 };
 
 }  // namespace gbemu

@@ -66,7 +66,11 @@ class Cpu {
  public:
   Cpu(Memory& memory, Interrupt& interrupt)
       : registers_(), memory_(memory), interrupt_(interrupt) {
-    registers_.pc.set(0x100);
+    if (memory_.IsBootRomMapped()) {
+      registers_.pc.set(0);
+    } else {
+      registers_.pc.set(0x100);
+    }
   }
 
   // CPUを1命令分進め、経過したクロック数（単位：M-cycle）を返す。

@@ -11,8 +11,12 @@
       "program": "${workspaceFolder}/build/gbemu",
       "args": [
         //"--debug",
-        //"${workspaceFolder}/test_rom/dmg-acid2.gb"
-        "${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
+        "--bootrom",
+        "${workspaceFolder}/test_rom/dmg_bootrom.bin",
+        "--rom",
+        "${workspaceFolder}/test_rom/dmg-acid2.gb"
+        //"${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
+        //"${workspaceFolder}/test_rom/hello-world.gb"
       ],
       "cwd": "${workspaceFolder}",
     }

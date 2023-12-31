@@ -8,22 +8,37 @@ namespace gbemu {
 
 Options options;
 
-void Options::Parse(int argc, char* argv[]) {
+bool Options::Parse(int argc, char* argv[]) {
   if (argc < 2) {
-    Error("Usage: gbemu [--debug] <rom_file>");
+    return false;
   }
 
   int i = 1;
-  std::string cur = argv[i];
-  if (cur == "--debug") {
-    debug_ = true;
-    i++;
-    if (i == argc) {
-      Error("Usage: gbemu [--debug] <rom_file>");
+  while (i < argc) {
+    std::string str = argv[i];
+    if (str == "--debug") {
+      debug_ = true;
+      i++;
+    } else if (str == "--bootrom") {
+      i++;
+      if (i == argc) {
+        return false;
+      }
+      boot_rom_file_name_ = argv[i];
+      has_boot_rom_ = true;
+      i++;
+    } else if (str == "--rom") {
+      i++;
+      if (i == argc) {
+        return false;
+      }
+      rom_file_name_ = argv[i];
+      i++;
+    } else {
+      return false;
     }
   }
-
-  filename_ = argv[i++];
+  return true;
 }
 
 }  // namespace gbemu

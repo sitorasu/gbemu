@@ -1,7 +1,9 @@
 #ifndef GBEMU_GAMEBOY_H_
 #define GBEMU_GAMEBOY_H_
 
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "cartridge.h"
 #include "cpu.h"
@@ -14,19 +16,20 @@ namespace gbemu {
 
 class GameBoy {
  public:
-  GameBoy(std::shared_ptr<Cartridge> cartridge)
+  GameBoy(Cartridge* cartridge, std::vector<std::uint8_t>* boot_rom = nullptr)
       : cartridge_(cartridge),
         interrupt_(),
         ppu_(interrupt_),
         timer_(interrupt_),
-        memory_(cartridge_, interrupt_, timer_, ppu_),
+        memory_(cartridge_, interrupt_, timer_, ppu_, boot_rom),
         cpu_(memory_, interrupt_) {}
+
   // 1フレーム進める
   void Step();
   const GbLcdPixelMatrix& GetBuffer() const { return ppu_.GetBuffer(); }
 
  private:
-  std::shared_ptr<Cartridge> cartridge_;
+  Cartridge* cartridge_;
   Interrupt interrupt_;
   Ppu ppu_;
   Timer timer_;
