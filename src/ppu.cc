@@ -194,6 +194,17 @@ unsigned Ppu::Step() {
   return elapsed;
 }
 
+void Ppu::ResetLCD() {
+  ly_ = 0;
+  ppu_mode_ = PpuMode::kOamScan;
+  elapsed_cycles_in_frame_ = 0;
+  is_buffer_ready_ = false;
+  stat_interrupt_wire_ = false;
+  scanned_oam_entries_.clear();
+  window_internal_line_counter_ = 0;
+  window_rendering_started_ = false;
+}
+
 namespace {
 
 // カラーIDとパレットのレジスタの値から表示すべき色を得る（ゲームボーイ用）

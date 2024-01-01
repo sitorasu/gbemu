@@ -34,7 +34,12 @@ class Ppu {
   Ppu(Interrupt& interrupt)
       : vram_(kVRamSize), oam_(kOamSize), interrupt_(interrupt) {}
 
-  void set_lcdc(std::uint8_t value) { lcdc_.data = value; }
+  void set_lcdc(std::uint8_t value) {
+    lcdc_.data = value;
+    if (!lcdc_.IsPPUEnabled()) {
+      ResetLCD();
+    }
+  }
   void set_stat(std::uint8_t value) { stat_.Set(value); }
   void set_scy(std::uint8_t value) { scy_ = value; }
   void set_scx(std::uint8_t value) { scx_ = value; }
@@ -276,6 +281,10 @@ class Ppu {
   // (*) Drawing Pixelsの実際の動作はそうではないが、
   //     実装が大変なので単純化する。
   unsigned Step();
+
+  // 現在のフレームの描画の進行状況を破棄する。
+  // 次の描画処理はフレームの先頭（LCDの左上）からとなる。
+  void ResetLCD();
 
   // VRAMがアクセス可能かどうか調べる
   bool IsVRamAccessible() const {

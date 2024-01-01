@@ -17,7 +17,8 @@
         //"${workspaceFolder}/test_rom/dmg-acid2.gb"
         //"${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
         //"${workspaceFolder}/test_rom/hello-world.gb"
-        "${workspaceFolder}/test_rom/tobu.gb"
+        //"${workspaceFolder}/test_rom/tobu.gb"
+        "${userHome}/Desktop/rom/pokemon-green.gb"
       ],
       "cwd": "${workspaceFolder}",
     }
