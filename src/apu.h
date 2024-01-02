@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdint>
 
+namespace gbemu {
+
 class Apu {
  public:
   std::uint8_t get_nr10() const { return nr10_; }
@@ -77,5 +79,7 @@ class Apu {
   std::uint8_t nr52_{};
   std::array<std::uint8_t, 16> wave_ram_;
 };
+
+}  // namespace gbemu
 
 #endif  // GBEMU_APU_H_

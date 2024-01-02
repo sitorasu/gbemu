@@ -8,6 +8,7 @@
 #include "apu.h"
 #include "cartridge.h"
 #include "interrupt.h"
+#include "joypad.h"
 #include "ppu.h"
 #include "timer.h"
 #include "utils.h"
@@ -45,11 +46,13 @@ class Memory {
 
  public:
   // コンストラクタ。ブートROMを与えるとメモリにマップした状態で初期化する。
-  Memory(Cartridge* cartridge, Interrupt& interrupt, Timer& timer, Ppu& ppu,
-         Apu& apu, std::vector<std::uint8_t>* boot_rom = nullptr)
+  Memory(Cartridge* cartridge, Interrupt& interrupt, Timer& timer,
+         Joypad& joypad, Ppu& ppu, Apu& apu,
+         std::vector<std::uint8_t>* boot_rom = nullptr)
       : cartridge_(cartridge),
         interrupt_(interrupt),
         timer_(timer),
+        joypad_(joypad),
         ppu_(ppu),
         apu_(apu),
         dma_(*this),
@@ -79,6 +82,7 @@ class Memory {
   Cartridge* cartridge_;
   Interrupt& interrupt_;
   Timer& timer_;
+  Joypad& joypad_;
   Ppu& ppu_;
   Apu& apu_;
   Dma dma_;

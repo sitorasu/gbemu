@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,11 +45,40 @@ std::vector<std::uint8_t> LoadRom(const std::string& path) {
   return rom;
 }
 
-bool PollQuit() {
+// イベントを処理する。具体的には
+// - キー入力をエミュレータに渡す。
+// - エミュレータのウインドウの閉じるボタンの押下を検出したら
+//   処理を中断してtrueを返す。
+bool PollEvent(GameBoy& gb) {
+  static std::map<SDL_Keycode, Joypad::Key> keymap{
+      {SDLK_w, Joypad::Key::kUp},
+      {SDLK_a, Joypad::Key::kLeft},
+      {SDLK_s, Joypad::Key::kDown},
+      {SDLK_d, Joypad::Key::kRight},
+      {SDLK_j, Joypad::Key::kB},
+      {SDLK_k, Joypad::Key::kA},
+      {SDLK_BACKSPACE, Joypad::Key::kSelect},
+      {SDLK_RETURN, Joypad::Key::kStart}};
   SDL_Event e;
   while (SDL_PollEvent(&e) != 0) {
     if (e.type == SDL_QUIT) {
       return true;
+    }
+    if (e.type == SDL_KEYDOWN) {
+      auto sym = e.key.keysym.sym;
+      auto i = keymap.find(sym);
+      if (i != keymap.end()) {
+        gb.PressKey(i->second);
+      }
+      continue;
+    }
+    if (e.type == SDL_KEYUP) {
+      auto sym = e.key.keysym.sym;
+      auto i = keymap.find(sym);
+      if (i != keymap.end()) {
+        gb.ReleaseKey(i->second);
+      }
+      continue;
     }
   }
   return false;
@@ -108,11 +138,11 @@ int main(int argc, char* argv[]) {
   }
 #else
   {
-    Renderer renderer(3);
+    Renderer renderer(2);
     if (renderer.vsync()) {
       // 垂直同期オン
       std::cout << "vsync on" << std::endl;
-      while (!PollQuit()) {
+      while (!PollEvent(gb)) {
         gb.Step();
         auto& buffer = gb.GetBuffer();
         renderer.Render(buffer);
@@ -120,7 +150,7 @@ int main(int argc, char* argv[]) {
     } else {
       // 垂直同期オフ
       std::cout << "vsync off" << std::endl;
-      while (!PollQuit()) {
+      while (!PollEvent(gb)) {
         gb.Step();
         renderer.Render(gb.GetBuffer());
 

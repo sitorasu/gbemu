@@ -154,19 +154,24 @@ unsigned Ppu::Step() {
   }
 
   // モードを更新する
+  bool mode_changed = false;
   if (ly_ < lcd::kHeight) {
     if (elapsed_cycles_in_line == 0) {
       ppu_mode_ = PpuMode::kOamScan;
+      mode_changed = true;
     } else if (elapsed_cycles_in_line == kOamScanDuration) {
       ppu_mode_ = PpuMode::kDrawingPixels;
+      mode_changed = true;
     } else if (elapsed_cycles_in_line ==
                (kOamScanDuration + kDrawingPixelsDuration)) {
       ppu_mode_ = PpuMode::kHBlank;
+      mode_changed = true;
     }
   } else if (ly_ == lcd::kHeight && elapsed_cycles_in_line == 0) {
     ppu_mode_ = PpuMode::kVBlank;
     is_buffer_ready_ = true;
     window_internal_line_counter_ = 0;
+    mode_changed = true;
   }
 
   // STATを更新する
@@ -187,7 +192,7 @@ unsigned Ppu::Step() {
     interrupt_.SetIfBit(InterruptSource::kStat);
   }
   stat_interrupt_wire_ = stat_interrupt;
-  if (ly_ == lcd::kHeight && elapsed_cycles_in_line == 0) {
+  if (mode_changed && ppu_mode_ == PpuMode::kVBlank) {
     interrupt_.SetIfBit(InterruptSource::kVBlank);
   }
 

@@ -18,8 +18,16 @@ namespace {
 // ダミーのIOレジスタ
 class IORegisters {
  public:
-  std::uint8_t Read(std::uint16_t address) { return GetRegAt(address); }
+  std::uint8_t Read(std::uint16_t address) {
+    if (address == 0xFF4C) {
+      return 0xFF;
+    }
+    return GetRegAt(address);
+  }
   void Write(std::uint16_t address, std::uint8_t value) {
+    if (address == 0xFF4C) {
+      return;
+    }
     GetRegAt(address) = value;
     // --debugフラグがない場合に限り、シリアル出力を標準出力に接続
     // --debugフラグがあるときは接続しない（デバッグ出力と混ざってぐちゃぐちゃになるので）
@@ -31,8 +39,6 @@ class IORegisters {
  private:
   std::uint8_t& GetRegAt(std::uint16_t address) {
     switch (address) {
-      case 0xFF00:
-        return joyp_;
       case 0xFF01:
         return sb_;
       case 0xFF02:
@@ -42,9 +48,8 @@ class IORegisters {
     }
   }
 
-  std::uint8_t joyp_{};  // $FF00
-  std::uint8_t sb_{};    // $FF01
-  std::uint8_t sc_{};    // $FF02
+  std::uint8_t sb_{};  // $FF01
+  std::uint8_t sc_{};  // $FF02
 };
 
 IORegisters io_regs;
@@ -60,6 +65,9 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
     return;
   }
   switch (address) {
+    case 0xFF00:
+      joypad_.set_p1(value);
+      break;
     case 0xFF04:
       timer_.reset_div();
       break;
@@ -168,6 +176,9 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
     case 0xFF43:
       ppu_.set_scx(value);
       break;
+    case 0xFF44:
+      // LYはRead Only
+      break;
     case 0xFF45:
       ppu_.set_lyc(value);
       break;
@@ -205,6 +216,8 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
     return 0xFF;
   }
   switch (address) {
+    case 0xFF00:
+      return joypad_.get_p1();
     case 0xFF04:
       return timer_.div();
     case 0xFF05:
@@ -296,7 +309,8 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     return internal_ram_.at(address & 0x1FFF);
   } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    Error("Read from $C000-DDFF is prohibited.");
+    WARN("Read from $E000-FE00 is prohibited.");
+    return Read8(address - 0x2000);
   } else if (InOamRange(address)) {
     // OAM RAMからの読み出し
     return ppu_.ReadOam8(address);
@@ -348,7 +362,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     internal_ram_.at(address & 0x1FFF) = value;
   } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    Error("Write to $C000-DDFF is prohibited.");
+    Error("Write to $E000-FE00 is prohibited.");
   } else if (InOamRange(address)) {
     // OAM RAMへの書き込み
     ppu_.WriteOam8(address, value);
@@ -365,7 +379,6 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     // レジスタIEへの書き込み
     ASSERT(address == 0xFFFF, "Write to unknown address: %d",
            static_cast<int>(address));
-    // WARN("Write to register IE is not implemented.");
     interrupt_.SetIe(value);
   }
 }
