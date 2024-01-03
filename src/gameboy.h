@@ -12,6 +12,7 @@
 #include "joypad.h"
 #include "memory.h"
 #include "ppu.h"
+#include "serial.h"
 #include "timer.h"
 
 namespace gbemu {
@@ -25,7 +26,9 @@ class GameBoy {
         apu_(),
         timer_(interrupt_),
         joypad_(interrupt_),
-        memory_(cartridge_, interrupt_, timer_, joypad_, ppu_, apu_, boot_rom),
+        serial_(),
+        memory_(cartridge_, interrupt_, timer_, joypad_, serial_, ppu_, apu_,
+                boot_rom),
         cpu_(memory_, interrupt_) {}
 
   // 1フレーム進める
@@ -47,6 +50,7 @@ class GameBoy {
   Apu apu_;
   Timer timer_;
   Joypad joypad_;
+  Serial serial_;
   Memory memory_;
   Cpu cpu_;
 };

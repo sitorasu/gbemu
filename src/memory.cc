@@ -7,57 +7,13 @@
 #include "apu.h"
 #include "command_line.h"
 #include "interrupt.h"
+#include "joypad.h"
 #include "ppu.h"
+#include "serial.h"
 #include "timer.h"
 #include "utils.h"
 
 namespace gbemu {
-
-namespace {
-
-// ダミーのIOレジスタ
-class IORegisters {
- public:
-  std::uint8_t Read(std::uint16_t address) {
-    if (address == 0xFF4C) {
-      return 0xFF;
-    }
-    return GetRegAt(address);
-  }
-  void Write(std::uint16_t address, std::uint8_t value) {
-    if (address == 0xFF4C) {
-      return;
-    }
-    GetRegAt(address) = value;
-    // --debugフラグがない場合に限り、シリアル出力を標準出力に接続
-    // --debugフラグがあるときは接続しない（デバッグ出力と混ざってぐちゃぐちゃになるので）
-    if (!options.debug() && address == 0xFF02 && value == 0x81) {
-      std::cout << static_cast<unsigned char>(sb_) << std::flush;
-    }
-  }
-
- private:
-  std::uint8_t& GetRegAt(std::uint16_t address) {
-    switch (address) {
-      case 0xFF01:
-        return sb_;
-      case 0xFF02:
-        return sc_;
-      default:
-        UNREACHABLE("Unknown I/O register: $%04X", address);
-    }
-  }
-
-  std::uint8_t sb_{};  // $FF01
-  std::uint8_t sc_{};  // $FF02
-};
-
-IORegisters io_regs;
-
-// ダミーのVRAM
-std::vector<std::uint8_t> vram(1024 * 8);
-
-}  // namespace
 
 void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
   // CGB固有のレジスタへのアクセスはとりあえず無効とする
@@ -67,6 +23,12 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
   switch (address) {
     case 0xFF00:
       joypad_.set_p1(value);
+      break;
+    case 0xFF01:
+      serial_.set_sb(value);
+      break;
+    case 0xFF02:
+      serial_.set_sc(value);
       break;
     case 0xFF04:
       timer_.reset_div();
@@ -204,20 +166,19 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
       ppu_.set_wx(value);
       break;
     default:
-      io_regs.Write(address, value);
+      SYSWARN("Write to unknown address: 0x%04X", address);
       break;
   }
 }
 
 std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
-  // CGB固有のレジスタへのアクセスはとりあえず無効とする
-  if (address >= 0xFF4D) {
-    // 0xFFを返さないとcpu_instrsで実行環境がCGBと判定されてstopが実行されてしまう
-    return 0xFF;
-  }
   switch (address) {
     case 0xFF00:
       return joypad_.get_p1();
+    case 0xFF01:
+      return serial_.sb();
+    case 0xFF02:
+      return serial_.sc();
     case 0xFF04:
       return timer_.div();
     case 0xFF05:
@@ -287,7 +248,8 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
     case 0xFF4B:
       return ppu_.wx();
     default:
-      return io_regs.Read(address);
+      SYSWARN("Read from unknown address: 0x%04X", address);
+      return 0xFF;
   }
 }
 
@@ -327,7 +289,6 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     // レジスタIEからの読み出し
     ASSERT(address == 0xFFFF, "Read from unknown address: %d",
            static_cast<int>(address));
-    // SYSWARN("Read from register IE is not implemented.");
     return interrupt_.GetIe();
   }
 }
@@ -362,7 +323,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     internal_ram_.at(address & 0x1FFF) = value;
   } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    Error("Write to $E000-FE00 is prohibited.");
+    SYSWARN("Write to $E000-FE00 is prohibited.");
   } else if (InOamRange(address)) {
     // OAM RAMへの書き込み
     ppu_.WriteOam8(address, value);
