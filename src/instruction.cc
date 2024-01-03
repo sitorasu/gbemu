@@ -255,6 +255,18 @@ std::shared_ptr<Instruction> DecodeJpCondU16(Cpu& cpu) {
   return std::make_shared<JpCondU16>(std::move(raw_code), pc, cond, imm);
 }
 
+// [opcode]
+// 0b11xxx111
+//
+// xxx: imm
+std::shared_ptr<Instruction> DecodeRst(Cpu& cpu) {
+  std::uint16_t pc = cpu.registers().pc.get();
+  std::vector<std::uint8_t> raw_code = {cpu.memory().Read8(pc)};
+  std::uint8_t opcode = raw_code[0];
+  unsigned imm = ExtractBits(opcode, 3, 3);
+  return std::make_shared<Rst>(std::move(raw_code), pc, imm);
+}
+
 std::shared_ptr<Instruction> DecodeUnprefixedUnknown(Cpu& cpu) {
   std::uint16_t pc = cpu.registers().pc.get();
   std::uint8_t opcode = cpu.memory().Read8(pc);
@@ -437,7 +449,7 @@ constexpr std::array<Instruction::DecodeFunction, 256> InitUnprefixed() {
 
     // opcode == 0b11xxx111
     opcode = (0b11 << 6) | (i << 3) | 0b111;
-    result[opcode] = DecodePrefixedU3<Rst, 3>;
+    result[opcode] = DecodeRst;
   }
 
   // opcode == 0b01xxxyyy AND xxx != 0b110 AND yyy != 0b110
@@ -2947,7 +2959,7 @@ unsigned Reti::Execute(Cpu& cpu) {
 
 std::string Rst::GetMnemonicString() {
   char buf[16];
-  std::sprintf(buf, "bit 0x%02X", imm_ << 3);
+  std::sprintf(buf, "rst 0x%02X", imm_ << 3);
   return std::string(buf);
 }
 

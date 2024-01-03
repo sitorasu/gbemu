@@ -16,10 +16,6 @@
 namespace gbemu {
 
 void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
-  // CGB固有のレジスタへのアクセスはとりあえず無効とする
-  if (address >= 0xFF4D && address != 0xFF50) {
-    return;
-  }
   switch (address) {
     case 0xFF00:
       joypad_.set_p1(value);
@@ -270,8 +266,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     // Internal RAMからの読み出し
     return internal_ram_.at(address & 0x1FFF);
   } else if (InEchoRamRange(address)) {
-    // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    SYSWARN("Read from $E000-FE00 is prohibited.");
+    // $C000-DDFFのミラー
     return Read8(address - 0x2000);
   } else if (InOamRange(address)) {
     // OAM RAMからの読み出し
@@ -322,8 +317,8 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     // Internal RAMへの書き込み
     internal_ram_.at(address & 0x1FFF) = value;
   } else if (InEchoRamRange(address)) {
-    // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    SYSWARN("Write to $E000-FE00 is prohibited.");
+    // $C000-DDFFのミラー
+    Write8(address - 0x2000, value);
   } else if (InOamRange(address)) {
     // OAM RAMへの書き込み
     ppu_.WriteOam8(address, value);
