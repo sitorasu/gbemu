@@ -11,11 +11,12 @@
 namespace gbemu {
 
 // カートリッジを表すクラス。
+// セーブデータの入出力に対応できるように、RAMのデータは内部に持たずポインタで管理する。
 class Cartridge {
  public:
   // ROMの内容をもとにインスタンスを生成する。
   // ROMの内容が不正な場合はプログラムを終了する。
-  Cartridge(std::vector<std::uint8_t>& rom);
+  Cartridge(std::vector<std::uint8_t>& rom, std::vector<std::uint8_t>* ram);
 
   // アドレスに応じてROMまたは(External)RAMから1バイトの値を読み出す。
   // 範囲外へのアクセスはエラーとしプログラムを終了する。
@@ -28,7 +29,7 @@ class Cartridge {
  private:
   CartridgeHeader header_;
   std::vector<std::uint8_t>& rom_;
-  std::vector<std::uint8_t> ram_;
+  std::vector<std::uint8_t>* ram_;
   std::unique_ptr<Mbc> mbc_;
 };
 

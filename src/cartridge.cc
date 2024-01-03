@@ -9,14 +9,30 @@
 
 namespace gbemu {
 
-Cartridge::Cartridge(std::vector<std::uint8_t>& rom)
-    : header_(), rom_(rom), ram_(), mbc_() {
+Cartridge::Cartridge(std::vector<std::uint8_t>& rom,
+                     std::vector<std::uint8_t>* ram)
+    : header_(), rom_(rom), ram_(ram), mbc_() {
+  // カートリッジヘッダのパース
   header_.Parse(rom_);
-  if (header_.rom_size() * 1024 != rom_.size()) {
+
+  // ROMサイズのチェック
+  auto rom_size_in_header = header_.rom_size() * 1024;
+  if (rom_.size() != rom_size_in_header) {
     Error("Actual ROM size is not consistent with the header.");
   }
-  ram_.resize(header_.ram_size() * 1024);
-  mbc_ = Mbc::Create(header_.type(), rom_, ram_);
+
+  // RAMの初期化
+  ASSERT(ram_ != nullptr, "Invalid argument.");
+  auto ram_size_in_header = header_.ram_size() * 1024;
+  if (ram_->size() != 0 && ram_->size() != ram_size_in_header) {
+    WARN("Failed to load the save data: create a new data.");
+  }
+  if (ram_->size() != ram_size_in_header) {
+    *ram_ = std::vector<std::uint8_t>(ram_size_in_header, 0);
+  }
+
+  // MBCの作成
+  mbc_ = Mbc::Create(header_.type(), rom_, *ram_);
 }
 
 std::uint8_t Cartridge::Read8(std::uint16_t address) const {

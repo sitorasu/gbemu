@@ -1,7 +1,9 @@
 #include <SDL.h>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -19,9 +21,9 @@ using namespace gbemu;
 
 namespace {
 
-// `path`のファイルを読み出す。
+// 指定したパスのファイルをバイナリファイルとして読み出す。
 // 読み出しに失敗したらプログラムを終了する。
-std::vector<std::uint8_t> LoadRom(const std::string& path) {
+std::vector<std::uint8_t> LoadBinary(const std::string& path) {
   // ROMファイルをオープン
   std::ifstream ifs(path, std::ios_base::in | std::ios_base::binary);
   if (ifs.fail()) {
@@ -43,6 +45,23 @@ std::vector<std::uint8_t> LoadRom(const std::string& path) {
   }
 
   return rom;
+}
+
+void OutputBinary(const std::string& path,
+                  const std::vector<std::uint8_t>& data) {
+  std::ofstream ofs(path, std::ios_base::out | std::ios_base::binary);
+  if (ofs.fail()) {
+    Error("File cannot open: %s", path.c_str());
+  }
+  std::ostreambuf_iterator<char> it_ofs(ofs);
+  std::copy(std::cbegin(data), std::cend(data), it_ofs);
+  if (ofs.fail()) {
+    Error("File cannot read: %s", path.c_str());
+  }
+  ofs.close();
+  if (ofs.fail()) {
+    Error("File cannot close: %s", path.c_str());
+  }
 }
 
 // イベントを処理する。具体的には
@@ -119,17 +138,26 @@ int main(int argc, char* argv[]) {
   std::atexit(SDL_Quit);
 #endif
 
-  // ROMファイルをロード
-  std::vector<std::uint8_t> rom(LoadRom(options.rom_file_name()));
+  // ROMファイルをロードする
+  std::vector<std::uint8_t> rom(LoadBinary(options.rom_file_name()));
 
-  // ブートROMがあるならロード
+  // ブートROMがあるならロードする
   std::vector<std::uint8_t>* boot_rom = nullptr;
   if (options.has_boot_rom()) {
     boot_rom =
-        new std::vector<std::uint8_t>(LoadRom(options.boot_rom_file_name()));
+        new std::vector<std::uint8_t>(LoadBinary(options.boot_rom_file_name()));
   }
 
-  Cartridge cartridge(rom);
+  // セーブファイル（ROMファイルの拡張子をsavに変えたファイル）が
+  // ROMファイルと同じ場所にあるならロードする
+  std::vector<std::uint8_t> save;
+  std::filesystem::path save_file_path = options.rom_file_name();
+  save_file_path.replace_extension("sav");
+  if (std::filesystem::exists(save_file_path)) {
+    save = LoadBinary(save_file_path.c_str());
+  }
+
+  Cartridge cartridge(rom, &save);
   GameBoy gb(&cartridge, boot_rom);
 #ifndef ENABLE_LCD
   for (;;) {
@@ -160,6 +188,8 @@ int main(int argc, char* argv[]) {
     }
   }
 #endif
+
+  OutputBinary(save_file_path, save);
 
   return 0;
 }
