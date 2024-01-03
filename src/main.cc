@@ -142,10 +142,9 @@ int main(int argc, char* argv[]) {
   std::vector<std::uint8_t> rom(LoadBinary(options.rom_file_name()));
 
   // ブートROMがあるならロードする
-  std::vector<std::uint8_t>* boot_rom = nullptr;
+  std::vector<std::uint8_t> boot_rom;
   if (options.has_boot_rom()) {
-    boot_rom =
-        new std::vector<std::uint8_t>(LoadBinary(options.boot_rom_file_name()));
+    boot_rom = LoadBinary(options.boot_rom_file_name());
   }
 
   // セーブファイル（ROMファイルの拡張子をsavに変えたファイル）が
@@ -158,13 +157,8 @@ int main(int argc, char* argv[]) {
   }
 
   Cartridge cartridge(rom, &save);
-  GameBoy gb(&cartridge, boot_rom);
-#ifndef ENABLE_LCD
-  for (;;) {
-    gb.Step();
-    auto& buffer = gb.GetBuffer();
-  }
-#else
+  GameBoy gb(&cartridge, boot_rom.size() != 0 ? &boot_rom : nullptr);
+#ifdef ENABLE_LCD
   {
     Renderer renderer(2);
     if (renderer.vsync()) {
@@ -186,6 +180,11 @@ int main(int argc, char* argv[]) {
         WaitForNextFrame();
       }
     }
+  }
+#else
+  for (;;) {
+    gb.Step();
+    auto& buffer = gb.GetBuffer();
   }
 #endif
 

@@ -25,7 +25,7 @@ Cartridge::Cartridge(std::vector<std::uint8_t>& rom,
   ASSERT(ram_ != nullptr, "Invalid argument.");
   auto ram_size_in_header = header_.ram_size() * 1024;
   if (ram_->size() != 0 && ram_->size() != ram_size_in_header) {
-    WARN("Failed to load the save data: create a new data.");
+    WarnUser("Failed to load the save data: create a new data.");
   }
   if (ram_->size() != ram_size_in_header) {
     *ram_ = std::vector<std::uint8_t>(ram_size_in_header, 0);

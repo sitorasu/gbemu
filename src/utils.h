@@ -45,9 +45,9 @@ namespace gbemu {
     std::exit(1);                                          \
   }
 
-// 警告を出すマクロ。
-// 使用例: WARN("Waning: %d", x);
-#define WARN(...)                                   \
+// 開発者向けの警告を出すマクロ。
+// 使用例: SYSWARN("The value is %d", x);
+#define SYSWARN(...)                                \
   {                                                 \
     std::fprintf(stderr, "System warning:\n");      \
     std::fprintf(stderr, "  FILE: %s\n", __FILE__); \
@@ -61,8 +61,14 @@ namespace gbemu {
 // 正常系のエラーとして使用すること。
 // 第1引数にエラーメッセージのフォーマット文字列、
 // 第2引数以降にフォーマット文字列に埋め込む値を指定する。
-// エラーの文字列の末尾は改行される。
+// メッセージの末尾は改行される。
 [[noreturn]] void Error(const char* fmt, ...);
+
+// ユーザー向けの警告を出す。
+// 第1引数にエラーメッセージのフォーマット文字列、
+// 第2引数以降にフォーマット文字列に埋め込む値を指定する。
+// メッセージの末尾は改行される。
+void WarnUser(const char* fmt, ...);
 
 std::uint16_t ConcatUInt(std::uint8_t lower, std::uint8_t upper);
 

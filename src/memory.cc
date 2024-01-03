@@ -309,7 +309,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     return internal_ram_.at(address & 0x1FFF);
   } else if (InEchoRamRange(address)) {
     // アクセス禁止区間（$C000-DDFFのミラーらしい）
-    WARN("Read from $E000-FE00 is prohibited.");
+    SYSWARN("Read from $E000-FE00 is prohibited.");
     return Read8(address - 0x2000);
   } else if (InOamRange(address)) {
     // OAM RAMからの読み出し
@@ -327,7 +327,7 @@ uint8_t Memory::Read8(std::uint16_t address) const {
     // レジスタIEからの読み出し
     ASSERT(address == 0xFFFF, "Read from unknown address: %d",
            static_cast<int>(address));
-    // WARN("Read from register IE is not implemented.");
+    // SYSWARN("Read from register IE is not implemented.");
     return interrupt_.GetIe();
   }
 }
@@ -368,7 +368,7 @@ void Memory::Write8(std::uint16_t address, std::uint8_t value) {
     ppu_.WriteOam8(address, value);
   } else if (InNotUsableAreaRange(address)) {
     // アクセス禁止区間
-    WARN("Write to $FEA0-FEFF is prohibited.");
+    SYSWARN("Write to $FEA0-FEFF is prohibited.");
   } else if (InIORegistersRange(address)) {
     // I/Oレジスタへの書き込み
     WriteIORegister(address, value);
