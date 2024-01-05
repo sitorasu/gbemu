@@ -45,6 +45,8 @@ CartridgeType GetCartridgeType(const std::vector<std::uint8_t>& rom) {
       return CartridgeType::kRomOnly;
     case 0x01:
       return CartridgeType::kMbc1;
+    case 0x02:
+      return CartridgeType::kMbc1Ram;
     case 0x03:
       return CartridgeType::kMbc1RamBattery;
     default:
@@ -97,6 +99,8 @@ std::string GetCartridgeTypeString(CartridgeType type) {
       return "ROM Only";
     case CartridgeType::kMbc1:
       return "MBC1";
+    case CartridgeType::kMbc1Ram:
+      return "MBC1+RAM";
     case CartridgeType::kMbc1RamBattery:
       return "MBC1+RAM+BATTERY";
     default:
@@ -119,14 +123,14 @@ void CartridgeHeader::Parse(const std::vector<std::uint8_t>& rom) {
   rom_size_ = GetRomSize(rom);
   ram_size_ = GetRamSize(rom);
 
-  if (HasRam() != (ram_size() != 0)) {
+  if (!HasMbcWithRam() && (ram_size() != 0)) {
     Error("Ram size is not consistent with cartridge type.");
   }
 
   Print();
 }
 
-bool CartridgeHeader::HasRam() const {
+bool CartridgeHeader::HasMbcWithRam() const {
   switch (type_) {
     case CartridgeType::kMbc1Ram:
     case CartridgeType::kMbc1RamBattery:
