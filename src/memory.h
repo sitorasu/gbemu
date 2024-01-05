@@ -20,27 +20,40 @@ namespace gbemu {
 // メモリアクセスを各コンポーネントに振り分ける。
 class Memory {
  private:
+  // DMA転送を行うクラス。
+  // DMA転送を要求されて最初のRunでは供給されるクロックが
+  // DMAレジスタの代入によって生じたものであると見越して何もしない。
+  // (DMAレジスタの代入が完了してからDMA転送を開始する方が正確な
+  // エミュレーションであるという立場をとる。)
   class Dma {
    public:
     Dma(Memory& memory) : memory_(memory) {}
 
     std::uint8_t dma() const { return dma_; }
 
-    // DMAレジスタに値をセットしDMA転送を開始する。
-    void StartDma(std::uint8_t value) {
+    // DMAレジスタに値をセットしDMA転送を要求する。
+    void RequestDma(std::uint8_t value) {
       dma_ = value;
-      during_transfer_ = true;
+      state_ = State::kRequested;
       src_address_ = (dma_ << 8);
       dst_address_ = kOamStartAddress;
     }
 
-    // 指定したマシンサイクル数だけDMA転送を進める
+    // 指定したマシンサイクル数だけDMA転送を進める。
+    // ただしRequestDmaを呼び出してから最初のRunでは何もしない。
     void Run(unsigned mcycles);
 
    private:
+    // DMA転送の状態。
+    enum class State {
+      kWaiting,    // DMA転送の要求待ちの状態
+      kRequested,  // DMA転送が要求され、まだ開始していない状態
+      kRunning     // DMA転送の最中
+    };
+
+    State state_{State::kWaiting};
     Memory& memory_;
     std::uint8_t dma_{};
-    bool during_transfer_{};
     std::uint16_t src_address_{};
     std::uint16_t dst_address_{kOamStartAddress};
   };

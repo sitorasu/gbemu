@@ -170,6 +170,7 @@ unsigned Ppu::Step() {
   } else if (ly_ == lcd::kHeight && elapsed_cycles_in_line == 0) {
     ppu_mode_ = PpuMode::kVBlank;
     is_buffer_ready_ = true;
+    window_rendering_started_ = false;
     window_internal_line_counter_ = 0;
     mode_changed = true;
   }

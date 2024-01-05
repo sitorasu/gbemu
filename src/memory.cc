@@ -141,7 +141,7 @@ void Memory::WriteIORegister(std::uint16_t address, std::uint8_t value) {
       ppu_.set_lyc(value);
       break;
     case 0xFF46:
-      dma_.StartDma(value);
+      dma_.RequestDma(value);
       break;
     case 0xFF47:
       ppu_.set_bgp(value);
@@ -345,7 +345,11 @@ void Memory::Write16(std::uint16_t address, std::uint16_t value) {
 }
 
 void Memory::Dma::Run(unsigned mcycles) {
-  if (!during_transfer_) {
+  if (state_ == State::kWaiting) {
+    return;
+  }
+  if (state_ == State::kRequested) {
+    state_ = State::kRunning;
     return;
   }
   while (mcycles > 0) {
@@ -356,7 +360,7 @@ void Memory::Dma::Run(unsigned mcycles) {
     mcycles--;
     if (dst_address_ == kOamEndAddress) {
       // 他は転送開始時にリセットするので今はほっとく
-      during_transfer_ = false;
+      state_ = State::kWaiting;
       break;
     }
   }
