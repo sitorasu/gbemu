@@ -19,8 +19,8 @@
         //"${workspaceFolder}/test_rom/hello-world.gb"
         //"${workspaceFolder}/test_rom/tobu.gb"
         //"${userHome}/Desktop/rom/pokemon-green.gb"
-        //"${userHome}/Desktop/rom/dq-monsters-teri.gb"
-        "${userHome}/Desktop/rom/donkeykong-land.gb"
+        "${userHome}/Desktop/rom/dq-monsters-teri.gb"
+        //"${userHome}/Desktop/rom/donkeykong-land.gb"
       ],
       "cwd": "${workspaceFolder}",
     }

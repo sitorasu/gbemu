@@ -35,9 +35,20 @@ class Ppu {
       : vram_(kVRamSize), oam_(kOamSize), interrupt_(interrupt) {}
 
   void set_lcdc(std::uint8_t value) {
+    bool was_enabled = lcdc_.IsPPUEnabled();
+
     lcdc_.data = value;
-    if (!lcdc_.IsPPUEnabled()) {
-      ResetLCD();
+
+    // PPUが無効になったら状態をリセット
+    if (was_enabled && !lcdc_.IsPPUEnabled()) {
+      ResetPpuState();
+    }
+
+    // PPUが有効になったらリセット状態から復帰
+    // （ResetPpuStateのコメントを参照）
+    if (!was_enabled && lcdc_.IsPPUEnabled()) {
+      ppu_mode_ = PpuMode::kOamScan;
+      stat_.SetPpuModeBits(ppu_mode_);
     }
   }
   void set_stat(std::uint8_t value) { stat_.Set(value); }
@@ -285,9 +296,9 @@ class Ppu {
   //     実装が大変なので単純化する。
   unsigned Step();
 
-  // 現在のフレームの描画の進行状況を破棄する。
-  // 次の描画処理はフレームの先頭（LCDの左上）からとなる。
-  void ResetLCD();
+  // PPUの状態をリセットする。
+  // LCDCでPPUが無効にされたとき呼ばれる。
+  void ResetPpuState();
 
   // VRAMがアクセス可能かどうか調べる
   bool IsVRamAccessible() const {

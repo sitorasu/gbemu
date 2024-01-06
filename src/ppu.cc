@@ -204,9 +204,15 @@ unsigned Ppu::Step() {
   return elapsed;
 }
 
-void Ppu::ResetLCD() {
+void Ppu::ResetPpuState() {
+  // モードがHBlankで経過サイクル数が0であるという状態は
+  // PPUが動作しているときには成立しえないが、停止しているときは
+  // この状態に固定するのが正しいエミュレーションとなる。
+  // ただしこの状態のまま動作を再開すると壊れるので、
+  // 動作を再開するときに正しい状態に戻す（モードをOAM Scanに変更する）。
   ly_ = 0;
-  ppu_mode_ = PpuMode::kOamScan;
+  ppu_mode_ = PpuMode::kHBlank;
+  stat_.SetPpuModeBits(ppu_mode_);
   elapsed_cycles_in_frame_ = 0;
   is_buffer_ready_ = false;
   stat_interrupt_wire_ = false;
