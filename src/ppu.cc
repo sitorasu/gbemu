@@ -378,8 +378,13 @@ void Ppu::WriteWindowOnScanline(ColorIdArray<lcd::kWidth>& color_ids) {
 void Ppu::WriteObjectsOnScanline(
     ColorIdArray<lcd::kWidth>& color_ids,
     std::array<const OamEntry*, lcd::kWidth>& oam_entries) {
+  // DMGでは下記のソートを行うのが正しいエミュレーションだが、
+  // 行わない（＝OAMの並び順だけで描画の優先順位を決める）方が
+  // 綺麗に見える気がするのでコメントアウトしておく
+  // ------------------------------------------------
   // X座標の小さいものを前面に描画するために、X座標の大きいものを先に描画する
-  std::stable_sort(scanned_oam_entries_.begin(), scanned_oam_entries_.end());
+  // std::stable_sort(scanned_oam_entries_.begin(), scanned_oam_entries_.end());
+
   for (auto i = scanned_oam_entries_.rbegin(), e = scanned_oam_entries_.rend();
        i != e; i++) {
     WriteSingleObjectOnScanline(*i, color_ids, oam_entries);
