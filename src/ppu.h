@@ -77,6 +77,9 @@ class Ppu {
   // 引数はCPUから見たメモリ上のアドレスと、書き込む値。
   // PPUのモードがOAM ScanまたはDrawing Pixelsのときは何もしない。
   void WriteOam8(std::uint16_t address, std::uint8_t value);
+  // OAMに強制的に値を書き込む。
+  // 引数はCPUから見たメモリ上のアドレスと、書き込む値。
+  void WriteOam8WithoutCheck(std::uint16_t address, std::uint8_t value);
   // 指定されたサイクル数だけPPUを進める。
   void Run(unsigned tcycle);
   // バッファへの描画が完了したかどうかを調べる。

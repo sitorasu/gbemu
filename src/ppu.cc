@@ -49,6 +49,10 @@ void Ppu::WriteOam8(std::uint16_t address, std::uint8_t value) {
   }
 }
 
+void Ppu::WriteOam8WithoutCheck(std::uint16_t address, std::uint8_t value) {
+  oam_.at(GetOamAddressOffset(address)) = value;
+}
+
 void Ppu::ScanNextOamEntry() {
   // 描画可能なオブジェクトの最大数に達しているなら何もしない
   if (scanned_oam_entries_.size() == kMaxNumOfObjectsOnScanline) {

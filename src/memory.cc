@@ -354,7 +354,7 @@ void Memory::Dma::Run(unsigned mcycles) {
   }
   while (mcycles > 0) {
     std::uint8_t value = memory_.Read8(src_address_);
-    memory_.Write8(dst_address_, value);
+    ppu_.WriteOam8WithoutCheck(dst_address_, value);
     src_address_++;
     dst_address_++;
     mcycles--;

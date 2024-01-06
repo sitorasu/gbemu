@@ -27,7 +27,7 @@ class Memory {
   // エミュレーションであるという立場をとる。)
   class Dma {
    public:
-    Dma(Memory& memory) : memory_(memory) {}
+    Dma(Memory& memory, Ppu& ppu) : memory_(memory), ppu_(ppu) {}
 
     std::uint8_t dma() const { return dma_; }
 
@@ -53,6 +53,7 @@ class Memory {
 
     State state_{State::kWaiting};
     Memory& memory_;
+    Ppu& ppu_;
     std::uint8_t dma_{};
     std::uint16_t src_address_{};
     std::uint16_t dst_address_{kOamStartAddress};
@@ -70,7 +71,7 @@ class Memory {
         serial_(serial),
         ppu_(ppu),
         apu_(apu),
-        dma_(*this),
+        dma_(*this, ppu),
         internal_ram_(kInternalRamSize),
         h_ram_(kHRamSize),
         boot_rom_(boot_rom),
