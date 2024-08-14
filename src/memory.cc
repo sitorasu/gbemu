@@ -191,34 +191,59 @@ std::uint8_t Memory::ReadIORegister(std::uint16_t address) const {
       return apu_.get_nr11();
     case 0xFF12:
       return apu_.get_nr12();
-    case 0xFF13:
-      return apu_.get_nr13();
+    // case 0xFF13:
+    //   NR13 is write-only
     case 0xFF14:
       return apu_.get_nr14();
     case 0xFF16:
       return apu_.get_nr21();
     case 0xFF17:
       return apu_.get_nr22();
-    case 0xFF18:
-      return apu_.get_nr23();
+    // case 0xFF18:
+    //   NR23 is write-only
     case 0xFF19:
       return apu_.get_nr24();
     case 0xFF1A:
       return apu_.get_nr30();
-    case 0xFF1B:
-      return apu_.get_nr31();
+    // case 0xFF1B:
+    //   NR30 is write-only
     case 0xFF1C:
       return apu_.get_nr32();
-    case 0xFF1D:
-      return apu_.get_nr33();
+    // case 0xFF1D:
+    //   NR33 is write-only
     case 0xFF1E:
       return apu_.get_nr34();
+    // case 0xFF20:
+    //   NR41 is write-only
+    case 0xFF21:
+      return apu_.get_nr42();
+    case 0xFF22:
+      return apu_.get_nr43();
+    case 0xFF23:
+      return apu_.get_nr44();
     case 0xFF24:
       return apu_.get_nr50();
     case 0xFF25:
       return apu_.get_nr51();
     case 0xFF26:
       return apu_.get_nr52();
+    case 0xFF30:
+    case 0xFF31:
+    case 0xFF32:
+    case 0xFF33:
+    case 0xFF34:
+    case 0xFF35:
+    case 0xFF36:
+    case 0xFF37:
+    case 0xFF38:
+    case 0xFF39:
+    case 0xFF3A:
+    case 0xFF3B:
+    case 0xFF3C:
+    case 0xFF3D:
+    case 0xFF3E:
+    case 0xFF3F:
+      return apu_.get_wave_ram(address - 0xFF30);
     case 0xFF40:
       return ppu_.lcdc();
     case 0xFF41:

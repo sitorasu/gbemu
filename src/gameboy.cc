@@ -8,6 +8,7 @@ void GameBoy::Step() {
     unsigned tcycles = mcycles * 4;
     memory_.RunDma(mcycles);
     timer_.Run(tcycles);
+    apu_.Run(tcycles);
     ppu_.Run(tcycles);
   }
   ppu_.ResetBufferReadyFlag();

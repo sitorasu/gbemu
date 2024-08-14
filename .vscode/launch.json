@@ -10,16 +10,17 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/gbemu",
       "args": [
-        //"--debug",
-        "--bootrom",
-        "${workspaceFolder}/test_rom/dmg_bootrom.bin",
+        "--debug",
+        //"--bootrom",
+        //"${workspaceFolder}/test_rom/dmg_bootrom.bin",
         "--rom",
         //"${workspaceFolder}/test_rom/dmg-acid2.gb"
         //"${workspaceFolder}/test_rom/cpu_instrs/cpu_instrs.gb"
+        "${workspaceFolder}/test_rom/cgb_sound/rom_singles/01-registers.gb"
         //"${workspaceFolder}/test_rom/hello-world.gb"
         //"${workspaceFolder}/test_rom/tobu.gb"
         //"${userHome}/Desktop/rom/pokemon-green.gb"
-        "${userHome}/Desktop/rom/dq-monsters-teri.gb"
+        //"${userHome}/Desktop/rom/dq-monsters-teri.gb"
         //"${userHome}/Desktop/rom/donkeykong-land.gb"
       ],
       "cwd": "${workspaceFolder}",
