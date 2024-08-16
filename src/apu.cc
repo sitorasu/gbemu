@@ -22,9 +22,9 @@ std::uint8_t Apu::get_nr52() const {
   if (channel2_.IsEnabled()) {
     result |= 1 << 1;
   }
-  // if (channel3_.IsEnabled()) {
-  //   result |= 1 << 2;
-  // }
+  if (channel3_.IsEnabled()) {
+    result |= 1 << 2;
+  }
   // if (channel4_.IsEnabled()) {
   //   result |= 1 << 3;
   // }
@@ -144,7 +144,7 @@ std::uint8_t Apu::PulseChannel::GetNrX1() const {
 }
 
 void Apu::PulseChannel::SetNrX1(std::uint8_t value) {
-  length_timer_.Set(64 - value & 0x3F);
+  length_timer_.InitTimer(value & 0x3F);
   value >>= 6;
   wave_duty_pattern_ = value;
 }
@@ -175,7 +175,7 @@ void Apu::PulseChannel::SetNrX2(std::uint8_t value) {
 }
 
 void Apu::PulseChannel::SetNrX3(std::uint8_t value) {
-  freqency_timer_.SetLower8BitOfFrequency(value);
+  frequency_timer_.SetLower8BitOfFrequency(value);
 }
 
 std::uint8_t Apu::PulseChannel::GetNrX4() const {
@@ -185,7 +185,7 @@ std::uint8_t Apu::PulseChannel::GetNrX4() const {
 }
 
 void Apu::PulseChannel::SetNrX4(std::uint8_t value) {
-  freqency_timer_.SetUpper3BitOfFrequency(value & 0x7);
+  frequency_timer_.SetUpper3BitOfFrequency(value & 0x7);
   value >>= 6;
   if ((value & 1) != 0) {
     length_timer_.TurnOn();
@@ -200,7 +200,7 @@ void Apu::PulseChannel::SetNrX4(std::uint8_t value) {
 }
 
 void Apu::PulseChannel::Trigger() {
-  unsigned frequency = freqency_timer_.GetFrequency();
+  unsigned frequency = frequency_timer_.GetFrequency();
   sweep_.Trigger(frequency);
   envelope_.Trigger();
   length_timer_.Trigger();
@@ -213,9 +213,8 @@ void Apu::PulseChannel::StepSweep() {
 
   bool channel_off_signal = sweep_.Step();
   unsigned frequency = sweep_.GetFrequency();
-  freqency_timer_.SetFrequency(frequency);
+  frequency_timer_.SetFrequency(frequency);
   if (channel_off_signal) {
-    printf("[DEBUG]: channel disabled by sweep\n");
     is_enabled_ = false;
   }
 }
@@ -227,7 +226,6 @@ void Apu::PulseChannel::StepLengthTimer() {
 
   bool channel_off_signal = length_timer_.Step();
   if (channel_off_signal) {
-    printf("[DEBUG]: channel disabled by length timer\n");
     is_enabled_ = false;
   }
 }
@@ -245,7 +243,7 @@ void Apu::PulseChannel::StepFrequencyTimer() {
     return;
   }
 
-  bool increment = freqency_timer_.Step();
+  bool increment = frequency_timer_.Step();
   if (increment) {
     wave_duty_position_ = (wave_duty_position_ + 1) % 8;
   }
@@ -263,16 +261,90 @@ double Apu::PulseChannel::GetDacOutput() const {
   return dac_output;
 }
 
+std::uint8_t Apu::WaveChannel::GetNr34() const {
+  std::uint8_t result = length_timer_.IsEnabled() ? 1 << 6 : 0;
+  result |= 0xBF;  // オープンのビット
+  return result;
+}
+
+void Apu::WaveChannel::SetNr34(std::uint8_t value) {
+  frequency_timer_.SetUpper3BitOfFrequency(value & 0x7);
+  value >>= 6;
+  if ((value & 1) != 0) {
+    length_timer_.TurnOn();
+  } else {
+    length_timer_.TurnOff();
+  }
+  value >>= 1;
+  if (value == 1) {
+    Trigger();
+    is_enabled_ = is_dac_enabled_;
+  }
+}
+
+void Apu::WaveChannel::StepFrequencyTimer() {
+  if (!IsEnabled()) {
+    return;
+  }
+
+  bool increment = frequency_timer_.Step();
+  if (increment) {
+    wave_position_ = (wave_position_ + 1) % 32;
+  }
+}
+
+void Apu::WaveChannel::StepLengthTimer() {
+  if (!IsEnabled()) {
+    return;
+  }
+
+  bool channel_off_signal = length_timer_.Step();
+  if (channel_off_signal) {
+    is_enabled_ = false;
+  }
+}
+
+unsigned Apu::WaveChannel::GetWaveSample() const {
+  unsigned sample = wave_ram_->at(wave_position_ / 2);
+  if (wave_position_ % 2 == 0) {
+    sample &= 0x0F;
+  } else {
+    sample = (sample >> 4) & 0x0F;
+  }
+  return sample;
+}
+
+unsigned Apu::WaveChannel::ApplyVolume(unsigned sample,
+                                       Apu::WaveChannel::Volume volume) {
+  switch (volume) {
+    case kWaveVolumeMute:
+      return 0;
+    case kWaveVolume100:
+      return sample;
+    case kWaveVolume50:
+      return sample >> 1;
+    case kWaveVolume25:
+      return sample >> 2;
+    default:
+      UNREACHABLE("Invalid enum value.")
+  }
+}
+
+double Apu::WaveChannel::GetDacOutput() const {
+  if (!is_dac_enabled_) {
+    return 0;
+  }
+  unsigned sample = GetWaveSample();
+  unsigned dac_input = ApplyVolume(sample, volume_);
+  double dac_output = (dac_input / 7.5) - 1.0;  // [-1.0, 1.0]
+  return dac_output;
+}
 // NR52のビット7を0にしたときの処理
 // Wave RAMはクリアされない
 void Apu::ResetApu() {
   channel1_ = PulseChannel();
   channel2_ = PulseChannel();
-  nr30_ = 0;
-  nr31_ = 0;
-  nr32_ = 0;
-  nr33_ = 0;
-  nr34_ = 0;
+  channel3_ = WaveChannel(wave_ram_);
   nr41_ = 0;
   nr42_ = 0;
   nr43_ = 0;
@@ -281,6 +353,8 @@ void Apu::ResetApu() {
   nr51_.set(0);
 }
 
+void Apu::WaveChannel::Trigger() { length_timer_.Trigger(); }
+
 void Apu::Step() {
   if (!is_apu_enabled_) {
     return;
@@ -288,6 +362,7 @@ void Apu::Step() {
 
   channel1_.StepFrequencyTimer();
   channel2_.StepFrequencyTimer();
+  channel3_.StepFrequencyTimer();
   bool clocked = frame_sequencer_.Step();
   if (clocked) {
     unsigned pos = frame_sequencer_.GetPos();
@@ -305,6 +380,7 @@ void Apu::Step() {
       case 0:
         channel1_.StepLengthTimer();
         channel2_.StepLengthTimer();
+        channel3_.StepLengthTimer();
         break;
       case 1:
         break;
@@ -312,12 +388,14 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
+        channel3_.StepLengthTimer();
         break;
       case 3:
         break;
       case 4:
         channel1_.StepLengthTimer();
         channel2_.StepLengthTimer();
+        channel3_.StepLengthTimer();
         break;
       case 5:
         break;
@@ -325,6 +403,7 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
+        channel3_.StepLengthTimer();
         break;
       case 7:
         channel1_.StepEnvelope();
@@ -355,8 +434,9 @@ void Apu::PushSample() {
       nr51_.IsChannel1LeftEnabled() ? channel1_.GetDacOutput() : 0;
   mixed_volume_left[1] =
       nr51_.IsChannel2LeftEnabled() ? channel2_.GetDacOutput() : 0;
+  mixed_volume_left[2] =
+      nr51_.IsChannel3LeftEnabled() ? channel3_.GetDacOutput() : 0;
 #if 0
-  mixed_volume_left[2] = nr51_.IsChannel3LeftEnabled() ? channel3_.GetDacOutput() : 0;
   mixed_volume_left[3] = nr51_.IsChannel4LeftEnabled() ? channel4_.GetDacOutput() : 0;
 #endif
   double left_sample = (mixed_volume_left[0] + mixed_volume_left[1] +
@@ -369,8 +449,9 @@ void Apu::PushSample() {
       nr51_.IsChannel1RightEnabled() ? channel1_.GetDacOutput() : 0;
   mixed_volume_right[1] =
       nr51_.IsChannel2RightEnabled() ? channel2_.GetDacOutput() : 0;
+  mixed_volume_right[2] =
+      nr51_.IsChannel3RightEnabled() ? channel3_.GetDacOutput() : 0;
 #if 0
-  mixed_volume_right[2] = nr51_.IsChannel3RightEnabled() ? channel3_.GetDacOutput() : 0;
   mixed_volume_right[3] = nr51_.IsChannel4RightEnabled() ? channel4_.GetDacOutput() : 0;
 #endif
   double right_sample = (mixed_volume_right[0] + mixed_volume_right[1] +

@@ -35,18 +35,15 @@ Audio::Audio() {
 Audio::~Audio() { SDL_CloseAudio(); }
 
 void Audio::PushSample(double left, double right) {
-  ASSERT(left_samples_.size() == right_samples_.size(),
-         "left/right sample sizes are mismatched!");
-
   // 音が遅れすぎている（サンプルが過剰に溜まっている）場合、
   // 消費されるのを待つ
-  while (left_samples_.size() > kMaxBufferSize) {
+  while (samples_.size() > kMaxBufferSize) {
     SDL_Delay(1);
   }
 
   SDL_LockAudio();
-  left_samples_.push_back(left);
-  right_samples_.push_back(right);
+  samples_.push_back(left);
+  samples_.push_back(right);
   SDL_UnlockAudio();
 }
 
@@ -70,9 +67,10 @@ double PopSample(std::deque<double> &buf) {
 void Audio::AudioCallback(Uint8 *_stream, int _length) {
   Sint16 *stream = (Sint16 *)_stream;
   int length = _length / 2;
+  ASSERT(length % 2 == 0,
+         "The number of left/right samples required are mismatched.");
 
-  for (int i = 0; i < length; i += 2) {
-    stream[i] = kAmplitude * PopSample(left_samples_);
-    stream[i + 1] = kAmplitude * PopSample(right_samples_);
+  for (int i = 0; i < length; i++) {
+    stream[i] = kAmplitude * PopSample(samples_);
   }
 }

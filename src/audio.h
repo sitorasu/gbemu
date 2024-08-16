@@ -19,10 +19,10 @@ class Audio {
  private:
   static constexpr int kFreqency = 44100;
   static constexpr int kAmplitude = 3000;
-  static constexpr int kMaxBufferSize = 2048;
+  static constexpr int kMaxBufferSize = 8192;
 
-  std::deque<double> left_samples_;
-  std::deque<double> right_samples_;
+  // 左右の音のサンプルを交互に格納するキュー
+  std::deque<double> samples_;
 };
 
 }  // namespace gbemu

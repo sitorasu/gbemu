@@ -10,7 +10,7 @@ namespace gbemu {
 
 class Apu {
  public:
-  Apu(Audio& audio) : audio_(audio) {}
+  Apu(Audio& audio) : channel3_(wave_ram_), audio_(audio) {}
   std::uint8_t get_nr10() const { return channel1_.GetNrX0(); }
   std::uint8_t get_nr11() const { return channel1_.GetNrX1(); }
   std::uint8_t get_nr12() const { return channel1_.GetNrX2(); }
@@ -18,9 +18,9 @@ class Apu {
   std::uint8_t get_nr21() const { return channel2_.GetNrX1(); }
   std::uint8_t get_nr22() const { return channel2_.GetNrX2(); }
   std::uint8_t get_nr24() const { return channel2_.GetNrX4(); }
-  std::uint8_t get_nr30() const { return nr30_ | 0x7F; }
-  std::uint8_t get_nr32() const { return nr32_ | 0x9F; }
-  std::uint8_t get_nr34() const { return nr34_ | 0xBF; }
+  std::uint8_t get_nr30() const { return channel3_.GetNr30(); }
+  std::uint8_t get_nr32() const { return channel3_.GetNr32(); }
+  std::uint8_t get_nr34() const { return channel3_.GetNr34(); }
   std::uint8_t get_nr42() const { return nr42_; }
   std::uint8_t get_nr43() const { return nr43_; }
   std::uint8_t get_nr44() const { return nr44_ | 0xBF; }
@@ -76,27 +76,27 @@ class Apu {
   }
   void set_nr30(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr30_ = value;
+      channel3_.SetNr30(value);
     }
   }
   void set_nr31(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr31_ = value;
+      channel3_.SetNr31(value);
     }
   }
   void set_nr32(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr32_ = value;
+      channel3_.SetNr32(value);
     }
   }
   void set_nr33(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr33_ = value;
+      channel3_.SetNr33(value);
     }
   }
   void set_nr34(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr34_ = value;
+      channel3_.SetNr34(value);
     }
   }
   void set_nr41(std::uint8_t value) {
@@ -193,8 +193,19 @@ class Apu {
     unsigned pos_{};
   };
 
+  // FrequencyTimerは(2048 - frequency_)回だけクロックの供給を受けると一巡する。
+  // ここでfrequency_はNR*3/NR*4によって決まる値である。
+  // 本来、FrequencyTimerへのクロックは何dot(=T-cycle)かに1回供給されるものであるが(*1)、
+  // 実装の都合上、クロックで数えるよりdotで数える方が簡単なので、このクラスでは
+  // dots_per_clock_という変数によってdotに換算して数えている。
+  // dots_per_clock_はコンストラクタで設定する。
+  //
+  // (*1)：チャネル1/2では4dot、チャネル3では2dot
   class FrequencyTimer {
    public:
+    FrequencyTimer(unsigned dots_per_clock)
+        : dots_per_clock_(dots_per_clock),
+          frequency_timer_(2048 * dots_per_clock) {}
     unsigned GetUpper3BitOfFrequency() const { return (frequency_ >> 8) & 7; }
     unsigned GetLower8BitOfFrequency() const { return frequency_ & 0xFF; }
     void SetUpper3BitOfFrequency(unsigned value) {
@@ -213,15 +224,16 @@ class Apu {
     bool Step() {
       frequency_timer_--;
       if (frequency_timer_ == 0) {
-        frequency_timer_ = (2048 - frequency_) * 4;
+        frequency_timer_ = (2048 - frequency_) * dots_per_clock_;
         return true;
       }
       return false;
     }
 
    private:
+    unsigned dots_per_clock_;
     unsigned frequency_{};
-    unsigned frequency_timer_{8192};
+    unsigned frequency_timer_;
   };
 
   class Envelope {
@@ -253,10 +265,13 @@ class Apu {
 
   class LengthTimer {
    public:
+    LengthTimer(unsigned timer_max_value) : timer_max_value_(timer_max_value) {}
     void TurnOn() { is_enabled_ = true; }
     void TurnOff() { is_enabled_ = false; }
     bool IsEnabled() const { return is_enabled_; }
-    void Set(unsigned value) { timer_ = value; }
+    void InitTimer(unsigned initial_value) {
+      timer_ = timer_max_value_ - initial_value;
+    }
     // Frame Sequencerからの1クロック分動作する
     // タイマーのカウントが終了したらtrueを返す
     bool Step() {
@@ -271,13 +286,14 @@ class Apu {
 
     void Trigger() {
       if (timer_ == 0) {
-        Set(64);
+        InitTimer(timer_max_value_);
       }
     }
 
    private:
     bool is_enabled_{};
     unsigned timer_{};
+    unsigned timer_max_value_;
   };
 
   class Sweep {
@@ -321,18 +337,69 @@ class Apu {
     void SetNrX2(std::uint8_t value);
     void SetNrX3(std::uint8_t value);
     void SetNrX4(std::uint8_t value);
-    void Trigger();
     double GetDacOutput() const;
 
    private:
+    void Trigger();
+
     Sweep sweep_{};
-    LengthTimer length_timer_{};
+    LengthTimer length_timer_{64};
     Envelope envelope_{};
-    FrequencyTimer freqency_timer_{};
+    FrequencyTimer frequency_timer_{4};
     bool is_enabled_{false};
     bool is_dac_enabled_{false};
     unsigned wave_duty_pattern_{};
     unsigned wave_duty_position_{};
+  };
+
+  class WaveChannel {
+   public:
+    WaveChannel(const std::array<std::uint8_t, 16>& wave_ram)
+        : wave_ram_(&wave_ram) {}
+    std::uint8_t GetNr30() const { return is_dac_enabled_ ? 0xFF : 0x7F; }
+    std::uint8_t GetNr32() const { return (volume_ << 5) | 0x9F; }
+    std::uint8_t GetNr34() const;
+    void SetNr30(std::uint8_t value) { is_dac_enabled_ = value & 0x80; }
+    void SetNr31(std::uint8_t value) { length_timer_.InitTimer(value); }
+    void SetNr32(std::uint8_t value) {
+      volume_ = static_cast<Volume>((value >> 5) & 0b11);
+    }
+    void SetNr33(std::uint8_t value) {
+      frequency_timer_.SetLower8BitOfFrequency(value);
+    }
+    void SetNr34(std::uint8_t value);
+    bool IsEnabled() const { return is_enabled_; }
+    void StepLengthTimer();
+    void StepFrequencyTimer();
+    double GetDacOutput() const;
+
+   private:
+    // NR32の設定
+    enum Volume {
+      kWaveVolumeMute,  // ミュート
+      kWaveVolume100,   // 100%
+      kWaveVolume50,    // 50%（WaveRAMの値を1回右シフト）
+      kWaveVolume25,    // 25%（WaveRAMの値を2回右シフト）
+    };
+
+    void Trigger();
+
+    // Wave RAMに格納されている32個のサンプル（各4ビット）のうち、
+    // 現在の位置のものを取得する。
+    unsigned GetWaveSample() const;
+
+    // Wave RAMから取得した4bitのサンプルにVolumeの設定を適用した値を得る
+    static unsigned ApplyVolume(unsigned sample, Volume volume);
+
+    LengthTimer length_timer_{256};
+    FrequencyTimer frequency_timer_{2};
+    bool is_enabled_{};
+    bool is_dac_enabled_{};
+    Volume volume_{};
+
+    // Wave RAMが保持する32個のサンプルのうちの1つを指すインデックス
+    unsigned wave_position_{};
+    const std::array<std::uint8_t, 16>* wave_ram_;
   };
 
   static const unsigned wave_duty_table[4][8];
@@ -341,11 +408,6 @@ class Apu {
   void Step();
   void PushSample();
 
-  std::uint8_t nr30_{};
-  std::uint8_t nr31_{};
-  std::uint8_t nr32_{};
-  std::uint8_t nr33_{};
-  std::uint8_t nr34_{};
   std::uint8_t nr41_{};
   std::uint8_t nr42_{};
   std::uint8_t nr43_{};
@@ -359,6 +421,7 @@ class Apu {
   FrameSequencer frame_sequencer_;
   PulseChannel channel1_;
   PulseChannel channel2_;
+  WaveChannel channel3_;
 
   Audio& audio_;
 };
