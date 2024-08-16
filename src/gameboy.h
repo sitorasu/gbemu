@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "apu.h"
+#include "audio.h"
 #include "cartridge.h"
 #include "cpu.h"
 #include "interrupt.h"
@@ -19,11 +20,12 @@ namespace gbemu {
 
 class GameBoy {
  public:
-  GameBoy(Cartridge* cartridge, std::vector<std::uint8_t>* boot_rom = nullptr)
+  GameBoy(Cartridge* cartridge, Audio& audio,
+          std::vector<std::uint8_t>* boot_rom = nullptr)
       : cartridge_(cartridge),
         interrupt_(),
         ppu_(interrupt_),
-        apu_(),
+        apu_(audio),
         timer_(interrupt_),
         joypad_(interrupt_),
         serial_(),
@@ -34,8 +36,8 @@ class GameBoy {
   // 1フレーム進める
   void Step();
 
-  // バッファを取得する
-  const GbLcdPixelMatrix& GetBuffer() const { return ppu_.GetBuffer(); }
+  // PPUのバッファを取得する
+  const GbLcdPixelMatrix& GetPpuBuffer() const { return ppu_.GetBuffer(); }
 
   // キーを押す。すでに押していたら何も起こらない。
   void PressKey(Joypad::Key key) { joypad_.PressKey(key); }

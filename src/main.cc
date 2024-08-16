@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "audio.h"
 #include "command_line.h"
 #include "gameboy.h"
 #include "renderer.h"
@@ -157,7 +158,8 @@ int main(int argc, char* argv[]) {
   }
 
   Cartridge cartridge(rom, &save);
-  GameBoy gb(&cartridge, boot_rom.size() != 0 ? &boot_rom : nullptr);
+  Audio audio;
+  GameBoy gb(&cartridge, audio, boot_rom.size() != 0 ? &boot_rom : nullptr);
 #ifdef ENABLE_LCD
   {
     Renderer renderer(2);
@@ -166,7 +168,7 @@ int main(int argc, char* argv[]) {
       std::cout << "vsync on" << std::endl;
       while (!PollEvent(gb)) {
         gb.Step();
-        auto& buffer = gb.GetBuffer();
+        auto& buffer = gb.GetPpuBuffer();
         renderer.Render(buffer);
       }
     } else {
@@ -174,7 +176,7 @@ int main(int argc, char* argv[]) {
       std::cout << "vsync off" << std::endl;
       while (!PollEvent(gb)) {
         gb.Step();
-        renderer.Render(gb.GetBuffer());
+        renderer.Render(gb.GetPpuBuffer());
 
         // 次のフレーム開始時間まで待つ
         WaitForNextFrame();
@@ -184,7 +186,7 @@ int main(int argc, char* argv[]) {
 #else
   for (;;) {
     gb.Step();
-    auto& buffer = gb.GetBuffer();
+    auto& buffer = gb.GetPpuBuffer();
   }
 #endif
 

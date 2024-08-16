@@ -3,12 +3,14 @@
 
 #include <array>
 #include <cstdint>
-#include <vector>
+
+#include "audio.h"
 
 namespace gbemu {
 
 class Apu {
  public:
+  Apu(Audio& audio) : audio_(audio) {}
   std::uint8_t get_nr10() const { return channel1_.GetNrX0(); }
   std::uint8_t get_nr11() const { return channel1_.GetNrX1(); }
   std::uint8_t get_nr12() const { return channel1_.GetNrX2(); }
@@ -227,6 +229,7 @@ class Apu {
     unsigned GetPeriod() const { return period_; }
     bool IsUpward() const { return is_upward_; }
     unsigned GetInitialVolume() const { return initial_volume_; }
+    unsigned GetCurrentVolume() const { return current_volume_; }
     void SetPeriod(unsigned value) { period_ = value; }
     void SetDirection(bool is_upward) { is_upward_ = is_upward; }
     void SetInitialVolume(unsigned value) { initial_volume_ = value; }
@@ -254,17 +257,22 @@ class Apu {
     void TurnOff() { is_enabled_ = false; }
     bool IsEnabled() const { return is_enabled_; }
     void Set(unsigned value) { timer_ = value; }
-    unsigned Get() const { return timer_; }
     // Frame Sequencerからの1クロック分動作する
     // タイマーのカウントが終了したらtrueを返す
     bool Step() {
-      if (is_enabled_) {
+      if (is_enabled_ && (timer_ > 0)) {
         timer_--;
         if (timer_ == 0) {
           return true;
         }
       }
       return false;
+    }
+
+    void Trigger() {
+      if (timer_ == 0) {
+        Set(64);
+      }
     }
 
    private:
@@ -314,6 +322,7 @@ class Apu {
     void SetNrX3(std::uint8_t value);
     void SetNrX4(std::uint8_t value);
     void Trigger();
+    double GetDacOutput() const;
 
    private:
     Sweep sweep_{};
@@ -330,6 +339,7 @@ class Apu {
 
   void ResetApu();
   void Step();
+  void PushSample();
 
   std::uint8_t nr30_{};
   std::uint8_t nr31_{};
@@ -350,7 +360,7 @@ class Apu {
   PulseChannel channel1_;
   PulseChannel channel2_;
 
-  std::vector<double> samples_{2048};
+  Audio& audio_;
 };
 
 }  // namespace gbemu

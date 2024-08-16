@@ -138,14 +138,13 @@ void Apu::PulseChannel::SetNrX0(std::uint8_t value) {
 
 std::uint8_t Apu::PulseChannel::GetNrX1() const {
   std::uint8_t result = 0;
-  result |= length_timer_.Get();
   result |= wave_duty_pattern_ << 6;
   result |= 0x3F;  // オープンのビット
   return result;
 }
 
 void Apu::PulseChannel::SetNrX1(std::uint8_t value) {
-  length_timer_.Set(value & 0x3F);
+  length_timer_.Set(64 - value & 0x3F);
   value >>= 6;
   wave_duty_pattern_ = value;
 }
@@ -194,44 +193,74 @@ void Apu::PulseChannel::SetNrX4(std::uint8_t value) {
     length_timer_.TurnOff();
   }
   value >>= 1;
-  if (value == 0) {
-    is_enabled_ = false;
-  } else if (!is_enabled_ && is_dac_enabled_) {
+  if (value == 1) {
     Trigger();
-    is_enabled_ = true;
+    is_enabled_ = is_dac_enabled_;
   }
 }
 
 void Apu::PulseChannel::Trigger() {
   unsigned frequency = freqency_timer_.GetFrequency();
   sweep_.Trigger(frequency);
-
   envelope_.Trigger();
+  length_timer_.Trigger();
 }
 
 void Apu::PulseChannel::StepSweep() {
+  if (!IsEnabled()) {
+    return;
+  }
+
   bool channel_off_signal = sweep_.Step();
   unsigned frequency = sweep_.GetFrequency();
   freqency_timer_.SetFrequency(frequency);
   if (channel_off_signal) {
+    printf("[DEBUG]: channel disabled by sweep\n");
     is_enabled_ = false;
   }
 }
 
 void Apu::PulseChannel::StepLengthTimer() {
+  if (!IsEnabled()) {
+    return;
+  }
+
   bool channel_off_signal = length_timer_.Step();
   if (channel_off_signal) {
+    printf("[DEBUG]: channel disabled by length timer\n");
     is_enabled_ = false;
   }
 }
 
-void Apu::PulseChannel::StepEnvelope() { envelope_.Step(); }
+void Apu::PulseChannel::StepEnvelope() {
+  if (!IsEnabled()) {
+    return;
+  }
+
+  envelope_.Step();
+}
 
 void Apu::PulseChannel::StepFrequencyTimer() {
+  if (!IsEnabled()) {
+    return;
+  }
+
   bool increment = freqency_timer_.Step();
   if (increment) {
     wave_duty_position_ = (wave_duty_position_ + 1) % 8;
   }
+}
+
+double Apu::PulseChannel::GetDacOutput() const {
+  if (!is_dac_enabled_) {
+    return 0;
+  }
+  unsigned wave_duty_level =
+      wave_duty_table[wave_duty_pattern_][wave_duty_position_];  // {0, 1}
+  unsigned volume = envelope_.GetCurrentVolume();  // {0, 1, ..., 15}
+  unsigned dac_input = wave_duty_level * volume;   // {0, 1, ..., 15}
+  double dac_output = (dac_input / 7.5) - 1.0;     // [-1.0, 1.0]
+  return dac_output;
 }
 
 // NR52のビット7を0にしたときの処理
@@ -283,7 +312,6 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
-        channel2_.StepSweep();
         break;
       case 3:
         break;
@@ -297,7 +325,6 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
-        channel2_.StepSweep();
         break;
       case 7:
         channel1_.StepEnvelope();
@@ -308,10 +335,10 @@ void Apu::Step() {
     }
   }
 
-  // TODO: 続きを書く（95クロックごとにバッファにサンプルを供給する）
   static int sample_counter = 95;
   if (--sample_counter == 0) {
     sample_counter = 95;
+    PushSample();
   }
 }
 
@@ -319,4 +346,36 @@ void Apu::Run(unsigned tcycles) {
   for (unsigned i = 0; i < tcycles; i++) {
     Step();
   }
+}
+
+void Apu::PushSample() {
+  // 左の音をミックスする
+  double mixed_volume_left[4] = {};
+  mixed_volume_left[0] =
+      nr51_.IsChannel1LeftEnabled() ? channel1_.GetDacOutput() : 0;
+  mixed_volume_left[1] =
+      nr51_.IsChannel2LeftEnabled() ? channel2_.GetDacOutput() : 0;
+#if 0
+  mixed_volume_left[2] = nr51_.IsChannel3LeftEnabled() ? channel3_.GetDacOutput() : 0;
+  mixed_volume_left[3] = nr51_.IsChannel4LeftEnabled() ? channel4_.GetDacOutput() : 0;
+#endif
+  double left_sample = (mixed_volume_left[0] + mixed_volume_left[1] +
+                        mixed_volume_left[2] + mixed_volume_left[3]) /
+                       4.0 * nr50_.GetLeftVolume();
+
+  // 右の音をミックスする
+  double mixed_volume_right[4] = {};
+  mixed_volume_right[0] =
+      nr51_.IsChannel1RightEnabled() ? channel1_.GetDacOutput() : 0;
+  mixed_volume_right[1] =
+      nr51_.IsChannel2RightEnabled() ? channel2_.GetDacOutput() : 0;
+#if 0
+  mixed_volume_right[2] = nr51_.IsChannel3RightEnabled() ? channel3_.GetDacOutput() : 0;
+  mixed_volume_right[3] = nr51_.IsChannel4RightEnabled() ? channel4_.GetDacOutput() : 0;
+#endif
+  double right_sample = (mixed_volume_right[0] + mixed_volume_right[1] +
+                         mixed_volume_right[2] + mixed_volume_right[3]) /
+                        4.0 * nr50_.GetRightVolume();
+
+  audio_.PushSample(left_sample, right_sample);
 }
