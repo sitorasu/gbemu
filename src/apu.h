@@ -21,9 +21,9 @@ class Apu {
   std::uint8_t get_nr30() const { return channel3_.GetNr30(); }
   std::uint8_t get_nr32() const { return channel3_.GetNr32(); }
   std::uint8_t get_nr34() const { return channel3_.GetNr34(); }
-  std::uint8_t get_nr42() const { return nr42_; }
-  std::uint8_t get_nr43() const { return nr43_; }
-  std::uint8_t get_nr44() const { return nr44_ | 0xBF; }
+  std::uint8_t get_nr42() const { return channel4_.GetNr42(); }
+  std::uint8_t get_nr43() const { return channel4_.GetNr43(); }
+  std::uint8_t get_nr44() const { return channel4_.GetNr44(); }
   std::uint8_t get_nr50() const { return nr50_.get(); }
   std::uint8_t get_nr51() const { return nr51_.get(); }
   std::uint8_t get_nr52() const;
@@ -101,22 +101,22 @@ class Apu {
   }
   void set_nr41(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr41_ = value;
+      channel4_.SetNr41(value);
     }
   }
   void set_nr42(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr42_ = value;
+      channel4_.SetNr42(value);
     }
   }
   void set_nr43(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr43_ = value;
+      channel4_.SetNr43(value);
     }
   }
   void set_nr44(std::uint8_t value) {
     if (is_apu_enabled_) {
-      nr44_ = value;
+      channel4_.SetNr44(value);
     }
   }
   void set_nr50(std::uint8_t value) {
@@ -402,16 +402,38 @@ class Apu {
     const std::array<std::uint8_t, 16>* wave_ram_;
   };
 
+  class NoiseChannel {
+   public:
+    std::uint8_t GetNr42() const;
+    std::uint8_t GetNr43() const;
+    std::uint8_t GetNr44() const;
+    void SetNr41(std::uint8_t value) { length_timer_.InitTimer(value & 0x3F); }
+    void SetNr42(std::uint8_t value);
+    void SetNr43(std::uint8_t value);
+    void SetNr44(std::uint8_t value);
+    double GetDacOutput() const;
+
+   private:
+    void Trigger();
+
+    LengthTimer length_timer_{64};
+    Envelope envelope_{};
+    std::uint16_t lfsr_{};
+    bool is_enabled_{false};
+    bool is_dac_enabled_{false};
+    unsigned clock_divider_{};
+    unsigned clock_shift_{};
+
+    enum LfsrWidth { kLfsr15Bit, kLfsr7Bit };
+    LfsrWidth lfsr_width_{};
+  };
+
   static const unsigned wave_duty_table[4][8];
 
   void ResetApu();
   void Step();
   void PushSample();
 
-  std::uint8_t nr41_{};
-  std::uint8_t nr42_{};
-  std::uint8_t nr43_{};
-  std::uint8_t nr44_{};
   Nr50 nr50_{};
   Nr51 nr51_{};
   std::array<std::uint8_t, 16> wave_ram_;
@@ -422,6 +444,7 @@ class Apu {
   PulseChannel channel1_;
   PulseChannel channel2_;
   WaveChannel channel3_;
+  NoiseChannel channel4_;
 
   Audio& audio_;
 };

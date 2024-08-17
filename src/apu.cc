@@ -345,15 +345,78 @@ void Apu::ResetApu() {
   channel1_ = PulseChannel();
   channel2_ = PulseChannel();
   channel3_ = WaveChannel(wave_ram_);
-  nr41_ = 0;
-  nr42_ = 0;
-  nr43_ = 0;
-  nr44_ = 0;
+  channel4_ = NoiseChannel();
   nr50_.set(0);
   nr51_.set(0);
 }
 
 void Apu::WaveChannel::Trigger() { length_timer_.Trigger(); }
+
+std::uint8_t Apu::NoiseChannel::GetNr42() const {
+  std::uint8_t result = 0;
+  result |= envelope_.GetPeriod();
+  if (envelope_.IsUpward()) {
+    result |= 1 << 3;
+  }
+  result |= envelope_.GetInitialVolume() << 4;
+  return result;
+}
+
+void Apu::NoiseChannel::SetNr42(std::uint8_t value) {
+  is_dac_enabled_ = (value & 0xF8) != 0;
+  is_enabled_ &= is_dac_enabled_;
+
+  unsigned period = value & 0x7;
+  value >>= 3;
+  bool is_upward = value & 1;
+  value >>= 1;
+  unsigned initial_volume = value;
+
+  envelope_.SetPeriod(period);
+  envelope_.SetDirection(is_upward);
+  envelope_.SetInitialVolume(initial_volume);
+}
+
+std::uint8_t Apu::NoiseChannel::GetNr43() const {
+  unsigned result = clock_divider_;
+  result |= lfsr_width_ << 3;
+  result |= clock_shift_ << 4;
+  return result;
+}
+
+void Apu::NoiseChannel::SetNr43(std::uint8_t value) {
+  clock_divider_ = value & 0b111;
+  value >>= 3;
+  lfsr_width_ = static_cast<LfsrWidth>(value & 1);
+  value >>= 1;
+  clock_shift_ = value & 0xF;
+}
+
+std::uint8_t Apu::NoiseChannel::GetNr44() const {
+  std::uint8_t result = length_timer_.IsEnabled() ? 1 << 6 : 0;
+  result |= 0xBF;  // オープンのビット
+  return result;
+}
+
+void Apu::NoiseChannel::SetNr44(std::uint8_t value) {
+  value >>= 6;
+  if ((value & 1) != 0) {
+    length_timer_.TurnOn();
+  } else {
+    length_timer_.TurnOff();
+  }
+  value >>= 1;
+  if (value == 1) {
+    Trigger();
+    is_enabled_ = is_dac_enabled_;
+  }
+}
+
+void Apu::NoiseChannel::Trigger() {
+  length_timer_.Trigger();
+  envelope_.Trigger();
+  lfsr_ = 0;
+}
 
 void Apu::Step() {
   if (!is_apu_enabled_) {
