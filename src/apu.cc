@@ -46,7 +46,6 @@ void Apu::Envelope::Step() {
     return;
   }
 
-  // ASSERT(period_timer_ > 0, "Period Timer should be reloaded.");
   if (period_timer_ > 0) {
     period_timer_--;
   }
@@ -68,8 +67,9 @@ void Apu::Envelope::Trigger() {
 }
 
 void Apu::Sweep::SetPeriod(unsigned value) {
+  ASSERT(value < 8, "Invalud sweep period is set!");
   unsigned old_period = period_;
-  period_ = value & 0x07;
+  period_ = value;
   if (period_ == 0) {
     timer_ = 0;
   } else if (old_period == 0) {
@@ -84,10 +84,10 @@ void Apu::Sweep::Trigger(unsigned initial_frequency) {
 
 unsigned Apu::Sweep::CalculateNewFrequency() const {
   unsigned adjustment = current_frequency_ >> shift_amount_;
-  if (is_upward_) {
-    return current_frequency_ + adjustment;
-  } else {
+  if (is_decrementing_) {
     return current_frequency_ - adjustment;
+  } else {
+    return current_frequency_ + adjustment;
   }
 }
 
@@ -129,7 +129,7 @@ void Apu::PulseChannel::SetNrX0(std::uint8_t value) {
   value >>= 3;
   bool is_upward = value & 1;
   value >>= 1;
-  unsigned period = value;
+  unsigned period = value & 0b111;
 
   sweep_.SetShiftAmount(shift_amount);
   sweep_.SetDirection(is_upward);
@@ -207,10 +207,6 @@ void Apu::PulseChannel::Trigger() {
 }
 
 void Apu::PulseChannel::StepSweep() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool channel_off_signal = sweep_.Step();
   unsigned frequency = sweep_.GetFrequency();
   frequency_timer_.SetFrequency(frequency);
@@ -220,29 +216,15 @@ void Apu::PulseChannel::StepSweep() {
 }
 
 void Apu::PulseChannel::StepLengthTimer() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool channel_off_signal = length_timer_.Step();
   if (channel_off_signal) {
     is_enabled_ = false;
   }
 }
 
-void Apu::PulseChannel::StepEnvelope() {
-  if (!IsEnabled()) {
-    return;
-  }
-
-  envelope_.Step();
-}
+void Apu::PulseChannel::StepEnvelope() { envelope_.Step(); }
 
 void Apu::PulseChannel::StepFrequencyTimer() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool increment = frequency_timer_.Step();
   if (increment) {
     wave_duty_position_ = (wave_duty_position_ + 1) % 8;
@@ -250,7 +232,7 @@ void Apu::PulseChannel::StepFrequencyTimer() {
 }
 
 double Apu::PulseChannel::GetDacOutput() const {
-  if (!is_dac_enabled_) {
+  if (!is_dac_enabled_ || !is_enabled_) {
     return 0;
   }
   unsigned wave_duty_level =
@@ -283,10 +265,6 @@ void Apu::WaveChannel::SetNr34(std::uint8_t value) {
 }
 
 void Apu::WaveChannel::StepFrequencyTimer() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool increment = frequency_timer_.Step();
   if (increment) {
     wave_position_ = (wave_position_ + 1) % 32;
@@ -294,10 +272,6 @@ void Apu::WaveChannel::StepFrequencyTimer() {
 }
 
 void Apu::WaveChannel::StepLengthTimer() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool channel_off_signal = length_timer_.Step();
   if (channel_off_signal) {
     is_enabled_ = false;
@@ -331,7 +305,7 @@ unsigned Apu::WaveChannel::ApplyVolume(unsigned sample,
 }
 
 double Apu::WaveChannel::GetDacOutput() const {
-  if (!is_dac_enabled_) {
+  if (!is_dac_enabled_ || !is_enabled_) {
     return 0;
   }
   unsigned sample = GetWaveSample();
@@ -444,26 +418,16 @@ void Apu::NoiseChannel::StepFrequencyTimer() {
 }
 
 void Apu::NoiseChannel::StepLengthTimer() {
-  if (!IsEnabled()) {
-    return;
-  }
-
   bool channel_off_signal = length_timer_.Step();
   if (channel_off_signal) {
     is_enabled_ = false;
   }
 }
 
-void Apu::NoiseChannel::StepEnvelope() {
-  if (!IsEnabled()) {
-    return;
-  }
-
-  envelope_.Step();
-}
+void Apu::NoiseChannel::StepEnvelope() { envelope_.Step(); }
 
 double Apu::NoiseChannel::GetDacOutput() const {
-  if (!is_dac_enabled_) {
+  if (!is_dac_enabled_ || !is_enabled_) {
     return 0;
   }
   unsigned level = lfsr_ & 1;

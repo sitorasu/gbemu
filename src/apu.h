@@ -300,10 +300,10 @@ class Apu {
    public:
     unsigned GetFrequency() const { return current_frequency_; }
     unsigned GetPeriod() const { return period_; }
-    unsigned IsUpward() const { return is_upward_; }
+    unsigned IsUpward() const { return is_decrementing_; }
     unsigned GetShiftAmount() const { return shift_amount_; }
     void SetPeriod(unsigned value);
-    void SetDirection(bool is_upward) { is_upward_ = is_upward; }
+    void SetDirection(bool is_upward) { is_decrementing_ = is_upward; }
     void SetShiftAmount(unsigned value) { shift_amount_ = value & 0x7; }
     void SetFrequency(unsigned value) { current_frequency_ = value; }
     void Trigger(unsigned initial_frequency);
@@ -315,7 +315,7 @@ class Apu {
    private:
     unsigned CalculateNewFrequency() const;
     unsigned period_{};
-    bool is_upward_{};
+    bool is_decrementing_{};
     unsigned shift_amount_{};
     unsigned current_frequency_{};
     unsigned timer_{};
