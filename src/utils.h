@@ -45,8 +45,11 @@ namespace gbemu {
     std::exit(1);                                          \
   }
 
-// 開発者向けの警告を出すマクロ。
+// 開発者向けの警告を出すマクロ。デバッグビルドでのみ有効。
 // 使用例: SYSWARN("The value is %d", x);
+#ifdef NDEBUG
+#define SYSWARN(...)
+#else
 #define SYSWARN(...)                                \
   {                                                 \
     std::fprintf(stderr, "System warning:\n");      \
@@ -56,6 +59,7 @@ namespace gbemu {
     std::fprintf(stderr, __VA_ARGS__);              \
     std::fprintf(stderr, "\n");                     \
   }
+#endif
 
 // エラーを報告してプログラムを終了する。
 // 正常系のエラーとして使用すること。

@@ -102,9 +102,6 @@ bool Apu::Sweep::Step() {
   if (timer_ == 0) {
     timer_ = period_;
     current_frequency_ = CalculateNewFrequency();
-    ASSERT(
-        current_frequency_ < 2048,
-        "If the new frequency overflows, sweep must be stopped immediately.");
     if (CalculateNewFrequency() > 2047) {
       return true;
     }
@@ -281,9 +278,9 @@ void Apu::WaveChannel::StepLengthTimer() {
 unsigned Apu::WaveChannel::GetWaveSample() const {
   unsigned sample = wave_ram_->at(wave_position_ / 2);
   if (wave_position_ % 2 == 0) {
-    sample &= 0x0F;
-  } else {
     sample = (sample >> 4) & 0x0F;
+  } else {
+    sample &= 0x0F;
   }
   return sample;
 }
