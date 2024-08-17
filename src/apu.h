@@ -412,15 +412,19 @@ class Apu {
     void SetNr43(std::uint8_t value);
     void SetNr44(std::uint8_t value);
     double GetDacOutput() const;
+    void StepFrequencyTimer();
+    void StepLengthTimer();
+    void StepEnvelope();
+    bool IsEnabled() const { return is_enabled_; }
 
    private:
     void Trigger();
 
     LengthTimer length_timer_{64};
     Envelope envelope_{};
-    std::uint16_t lfsr_{};
-    bool is_enabled_{false};
-    bool is_dac_enabled_{false};
+    std::uint16_t lfsr_{0xFFFF};
+    bool is_enabled_{};
+    bool is_dac_enabled_{};
     unsigned clock_divider_{};
     unsigned clock_shift_{};
 

@@ -25,9 +25,9 @@ std::uint8_t Apu::get_nr52() const {
   if (channel3_.IsEnabled()) {
     result |= 1 << 2;
   }
-  // if (channel4_.IsEnabled()) {
-  //   result |= 1 << 3;
-  // }
+  if (channel4_.IsEnabled()) {
+    result |= 1 << 3;
+  }
   result |= 0x70;  // オープンビット
   return result;
 }
@@ -415,7 +415,62 @@ void Apu::NoiseChannel::SetNr44(std::uint8_t value) {
 void Apu::NoiseChannel::Trigger() {
   length_timer_.Trigger();
   envelope_.Trigger();
-  lfsr_ = 0;
+  lfsr_ = 0xFFFF;
+}
+
+namespace {
+
+unsigned GetReloadedTimerValue(unsigned divider, unsigned shift) {
+  return (divider > 0 ? (divider << 4) : 8) << shift;
+}
+
+}  // namespace
+
+void Apu::NoiseChannel::StepFrequencyTimer() {
+  static unsigned timer = GetReloadedTimerValue(clock_divider_, clock_shift_);
+
+  if (--timer == 0) {
+    timer = GetReloadedTimerValue(clock_divider_, clock_shift_);
+
+    unsigned xor_result = (lfsr_ & 1) ^ ((lfsr_ & 0b10) >> 1);
+    lfsr_ &= ~(1 << 15);
+    lfsr_ |= xor_result << 15;
+    if (lfsr_width_ == kLfsr7Bit) {
+      lfsr_ &= ~(1 << 7);
+      lfsr_ |= xor_result << 7;
+    }
+    lfsr_ >>= 1;
+  }
+}
+
+void Apu::NoiseChannel::StepLengthTimer() {
+  if (!IsEnabled()) {
+    return;
+  }
+
+  bool channel_off_signal = length_timer_.Step();
+  if (channel_off_signal) {
+    is_enabled_ = false;
+  }
+}
+
+void Apu::NoiseChannel::StepEnvelope() {
+  if (!IsEnabled()) {
+    return;
+  }
+
+  envelope_.Step();
+}
+
+double Apu::NoiseChannel::GetDacOutput() const {
+  if (!is_dac_enabled_) {
+    return 0;
+  }
+  unsigned level = lfsr_ & 1;
+  unsigned volume = envelope_.GetCurrentVolume();
+  unsigned dac_input = level * volume;
+  double dac_output = (dac_input / 7.5) - 1.0;
+  return dac_output;
 }
 
 void Apu::Step() {
@@ -426,6 +481,7 @@ void Apu::Step() {
   channel1_.StepFrequencyTimer();
   channel2_.StepFrequencyTimer();
   channel3_.StepFrequencyTimer();
+  channel4_.StepFrequencyTimer();
   bool clocked = frame_sequencer_.Step();
   if (clocked) {
     unsigned pos = frame_sequencer_.GetPos();
@@ -444,6 +500,7 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel2_.StepLengthTimer();
         channel3_.StepLengthTimer();
+        channel4_.StepLengthTimer();
         break;
       case 1:
         break;
@@ -452,6 +509,7 @@ void Apu::Step() {
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
         channel3_.StepLengthTimer();
+        channel4_.StepLengthTimer();
         break;
       case 3:
         break;
@@ -459,6 +517,7 @@ void Apu::Step() {
         channel1_.StepLengthTimer();
         channel2_.StepLengthTimer();
         channel3_.StepLengthTimer();
+        channel4_.StepLengthTimer();
         break;
       case 5:
         break;
@@ -467,10 +526,12 @@ void Apu::Step() {
         channel1_.StepSweep();
         channel2_.StepLengthTimer();
         channel3_.StepLengthTimer();
+        channel4_.StepLengthTimer();
         break;
       case 7:
         channel1_.StepEnvelope();
         channel2_.StepEnvelope();
+        channel4_.StepEnvelope();
         break;
       default:
         UNREACHABLE("Invalid Position!");
@@ -499,9 +560,8 @@ void Apu::PushSample() {
       nr51_.IsChannel2LeftEnabled() ? channel2_.GetDacOutput() : 0;
   mixed_volume_left[2] =
       nr51_.IsChannel3LeftEnabled() ? channel3_.GetDacOutput() : 0;
-#if 0
-  mixed_volume_left[3] = nr51_.IsChannel4LeftEnabled() ? channel4_.GetDacOutput() : 0;
-#endif
+  mixed_volume_left[3] =
+      nr51_.IsChannel4LeftEnabled() ? channel4_.GetDacOutput() : 0;
   double left_sample = (mixed_volume_left[0] + mixed_volume_left[1] +
                         mixed_volume_left[2] + mixed_volume_left[3]) /
                        4.0 * nr50_.GetLeftVolume();
@@ -514,9 +574,8 @@ void Apu::PushSample() {
       nr51_.IsChannel2RightEnabled() ? channel2_.GetDacOutput() : 0;
   mixed_volume_right[2] =
       nr51_.IsChannel3RightEnabled() ? channel3_.GetDacOutput() : 0;
-#if 0
-  mixed_volume_right[3] = nr51_.IsChannel4RightEnabled() ? channel4_.GetDacOutput() : 0;
-#endif
+  mixed_volume_right[3] =
+      nr51_.IsChannel4RightEnabled() ? channel4_.GetDacOutput() : 0;
   double right_sample = (mixed_volume_right[0] + mixed_volume_right[1] +
                          mixed_volume_right[2] + mixed_volume_right[3]) /
                         4.0 * nr50_.GetRightVolume();
